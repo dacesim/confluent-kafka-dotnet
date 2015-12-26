@@ -112,11 +112,8 @@ namespace RdKafka.Internal
                 /* const rd_kafka_topic_partition_list_t * */ IntPtr offsets,
                 bool async);
 
-        [DllImport("librdkafka")]
-        static extern /* char * */ IntPtr rd_kafka_memberid(IntPtr rk);
-
         [DllImport("librdkafka", CallingConvention = CallingConvention.Cdecl)]
-        static extern ErrorCode rd_kafka_poll_set_consumer(IntPtr rk);
+        static extern /* char * */ IntPtr rd_kafka_memberid(IntPtr rk);
 
         [DllImport("librdkafka", CallingConvention = CallingConvention.Cdecl)]
         static extern void rd_kafka_set_log_level(IntPtr rk, int level);
@@ -131,14 +128,6 @@ namespace RdKafka.Internal
             if (skh.IsInvalid)
             {
                 throw new InvalidOperationException(errorStringBuilder.ToString());
-            }
-            if (type == RdKafkaType.Consumer)
-            {
-                ErrorCode err = rd_kafka_poll_set_consumer(skh.handle);
-                if (err != ErrorCode.NO_ERROR)
-                {
-                    throw RdKafkaException.FromErr(err, "rd_kafka_poll_set_consumer failed");
-                }
             }
             return skh;
         }
