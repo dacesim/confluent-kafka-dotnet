@@ -8,4 +8,3 @@ obj/
 todo.txt
 .cache
 src/RdKafka/runtimes
-Properties
