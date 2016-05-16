@@ -120,13 +120,18 @@ namespace RdKafka
         /// </summary>
         public Task<Metadata> Metadata (bool allTopics=true, Topic onlyForTopic=null,
                 bool includeInternal=false, TimeSpan timeout=default(TimeSpan))
-            => Task.FromResult(handle.Metadata(allTopics, onlyForTopic?.handle, includeInternal, timeout));
+        {
+            return Task.FromResult(
+                    handle.Metadata(allTopics, onlyForTopic?.handle, includeInternal, timeout));
+        }
 
         /// <summary>
         /// Request lowest and highest offsets for a topic partition from broker.
         /// </summary>
         public Task<Offsets> QueryWatermarkOffsets(string topic, int partition, TimeSpan timeout=default(TimeSpan))
-            => Task.FromResult(handle.QueryWatermarkOffsets(topic, partition, timeout));
+        {
+            return Task.FromResult(handle.QueryWatermarkOffsets(topic, partition, timeout));
+        }
 
         public struct ErrorArgs
         {
@@ -142,18 +147,24 @@ namespace RdKafka
         public event EventHandler<string> OnStatistics;
 
         Task StartCallbackTask(CancellationToken ct)
-            => Task.Factory.StartNew(() =>
+        {
+            return Task.Factory.StartNew(() =>
                 {
                     while (!ct.IsCancellationRequested)
                     {
                         handle.Poll((IntPtr) 1000);
                     }
                 }, ct, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+        }
 
         public Task<List<GroupInfo>> ListGroups(TimeSpan timeout)
-            => Task.FromResult(handle.ListGroups(null, (IntPtr) timeout.TotalMilliseconds));
+        {
+            return Task.FromResult(handle.ListGroups(null, (IntPtr) timeout.TotalMilliseconds));
+        }
 
         public Task<GroupInfo> ListGroup(string group, TimeSpan timeout)
-            => Task.FromResult(handle.ListGroups(group, (IntPtr) timeout.TotalMilliseconds).Single());
+        {
+            return Task.FromResult(handle.ListGroups(group, (IntPtr) timeout.TotalMilliseconds).Single());
+        }
     }
 }

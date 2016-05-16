@@ -28,7 +28,10 @@ namespace RdKafka.Internal
             return true;
         }
 
-        internal IntPtr Dup() => LibRdKafka.topic_conf_dup(handle);
+        internal IntPtr Dup()
+        {
+            return LibRdKafka.topic_conf_dup(handle);
+        }
 
         // TODO: deduplicate, merge with other one
         internal Dictionary<string, string> Dump()

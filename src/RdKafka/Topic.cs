@@ -94,6 +94,9 @@ namespace RdKafka
         ///
         /// This function must only be called from inside a partitioner function.
         /// </summary>
-        public bool PartitionAvailable(int partition) => handle.PartitionAvailable(partition);
+        public bool PartitionAvailable(int partition)
+        {
+            return handle.PartitionAvailable(partition);
+        }
     }
 }
