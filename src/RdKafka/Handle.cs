@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -20,10 +21,6 @@ namespace RdKafka
         Task callbackTask;
         CancellationTokenSource callbackCts;
 
-        ~Handle()
-        {
-            Dispose(false);
-        }
 
         internal void Init(RdKafkaType type, IntPtr config, Config.LogCallback logger)
         {
@@ -69,27 +66,18 @@ namespace RdKafka
             callbackTask = StartCallbackTask(callbackCts.Token);
         }
 
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
+        public virtual void Dispose()
         {
             callbackCts.Cancel();
             callbackTask.Wait();
 
-            if (disposing)
+            // Wait until all outstanding sends have completed
+            while (OutQueueLength > 0)
             {
-                // Wait until all outstanding sends have completed
-                while (OutQueueLength > 0)
-                {
-                    handle.Poll((IntPtr) 100);
-                }
-
-                handle.Dispose();
+                handle.Poll((IntPtr) 100);
             }
+
+            handle.Dispose();
         }
 
         /// <summary>

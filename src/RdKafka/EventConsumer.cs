@@ -9,7 +9,7 @@ namespace RdKafka
     ///
     /// Thin abstraction on top of <see cref="Consumer" />.
     /// </summary>
-    public class EventConsumer : Consumer
+    public class EventConsumer : Consumer, IDisposable
     {
         Task consumerTask;
         CancellationTokenSource consumerCts;
@@ -81,18 +81,14 @@ namespace RdKafka
             }
         }
 
-
-        protected override void Dispose(bool disposing)
+        public override void Dispose()
         {
-            if (disposing)
+            if (consumerTask != null)
             {
-                if (consumerTask != null)
-                {
-                    Stop().Wait();
-                }
+                Stop().Wait();
             }
 
-            base.Dispose(disposing);
+            base.Dispose();
         }
     }
 }
