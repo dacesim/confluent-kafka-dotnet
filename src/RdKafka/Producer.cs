@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using RdKafka.Internal;
 
 namespace RdKafka
@@ -28,25 +29,26 @@ namespace RdKafka
         public Topic Topic(string topic, TopicConfig config = null) => new Topic(handle, this, topic, config);
 
         // Explicitly keep reference to delegate so it stays alive
-        private static readonly LibRdKafka.DeliveryReportCallback DeliveryReportDelegate = DeliveryReportCallback;
+        static LibRdKafka.DeliveryReportCallback DeliveryReportDelegate = DeliveryReportCallback;
 
-        private static void DeliveryReportCallback(IntPtr rk, ref rd_kafka_message rkmessage, IntPtr opaque)
+        static void DeliveryReportCallback(IntPtr rk,
+                ref rd_kafka_message rkmessage, IntPtr opaque)
         {
             // msg_opaque was set by Topic.Produce
             var gch = GCHandle.FromIntPtr(rkmessage._private);
-            var deliveryHandler = (IDeliveryHandler) gch.Target;
+            var deliveryCompletionSource = (TaskCompletionSource<DeliveryReport>) gch.Target;
             gch.Free();
 
             if (rkmessage.err != 0)
             {
-                deliveryHandler.SetException(
+                deliveryCompletionSource.SetException(
                     RdKafkaException.FromErr(
                         rkmessage.err,
                         "Failed to produce message"));
                 return;
             }
 
-            deliveryHandler.SetResult(new DeliveryReport {
+            deliveryCompletionSource.SetResult(new DeliveryReport() {
                 Offset = rkmessage.offset,
                 Partition = rkmessage.partition
             });
