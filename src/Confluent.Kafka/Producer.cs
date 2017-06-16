@@ -794,31 +794,6 @@ namespace Confluent.Kafka
         /// </summary>
         public Metadata GetMetadata()
             => GetMetadata(true, null, -1);
-
-        /// <summary>
-        ///     Adds one or more brokers to the Producer's list of initial
-        ///     bootstrap brokers. 
-        ///
-        ///     Note: Additional brokers are discovered automatically as 
-        ///     soon as the Producer connects to any broker by querying the 
-        ///     broker metadata. Calling this method is only required in 
-        ///     some scenarios where the address of all brokers in the 
-        ///     cluster changes.
-        /// </summary>
-        /// <param name="brokers">
-        ///     Coma-separated list of brokers in the same format as 
-        ///     the bootstrap.server configuration parameter.
-        /// </param>
-        /// <remarks>
-        ///     There is currently no API to remove existing configured, 
-        ///     added or learnt brokers.
-        /// </remarks>
-        /// <returns>
-        ///     The number of brokers added. This value includes brokers
-        ///     that may have been specified a second time.
-        /// </returns>
-        public int AddBrokers(string brokers)
-            => kafkaHandle.AddBrokers(brokers);
     }
 
 
@@ -835,8 +810,6 @@ namespace Confluent.Kafka
             this.producer = producer;
             KeySerializer = keySerializer;
             ValueSerializer = valueSerializer;
-
-            // TODO: allow serializers to be set in the producer config IEnumerable<KeyValuePair<string, object>>.
 
             if (KeySerializer == null)
             {
@@ -895,8 +868,8 @@ namespace Confluent.Kafka
         private Task<Message<TKey, TValue>> Produce(string topic, TKey key, TValue val, DateTime? timestamp, int partition, bool blockIfQueueFull)
         {
             var handler = new TypedTaskDeliveryHandlerShim(key, val);
-            var keyBytes = KeySerializer?.Serialize(key);
-            var valBytes = ValueSerializer?.Serialize(val);
+            var keyBytes = KeySerializer?.Serialize(topic, key);
+            var valBytes = ValueSerializer?.Serialize(topic, val);
             producer.Produce(topic, valBytes, 0, valBytes == null ? 0 : valBytes.Length, keyBytes, 0, keyBytes == null ? 0 : keyBytes.Length, timestamp, partition, blockIfQueueFull, handler);
             return handler.Task;
         }
@@ -948,8 +921,8 @@ namespace Confluent.Kafka
         private void Produce(string topic, TKey key, TValue val, DateTime? timestamp, int partition, bool blockIfQueueFull, IDeliveryHandler<TKey, TValue> deliveryHandler)
         {
             var handler = new TypedDeliveryHandlerShim(key, val, deliveryHandler);
-            var keyBytes = KeySerializer?.Serialize(key);
-            var valBytes = ValueSerializer?.Serialize(val);
+            var keyBytes = KeySerializer?.Serialize(topic, key);
+            var valBytes = ValueSerializer?.Serialize(topic, val);
             producer.Produce(topic, valBytes, 0, valBytes == null ? 0 : valBytes.Length, keyBytes, 0, keyBytes == null ? 0 : keyBytes.Length, timestamp, partition, blockIfQueueFull, handler);
         }
 
@@ -1007,7 +980,20 @@ namespace Confluent.Kafka
             ISerializer<TValue> valueSerializer,
             bool manualPoll, bool disableDeliveryReports)
         {
-            producer = new Producer(config, manualPoll, disableDeliveryReports);
+            var configWithoutKeySerializerProperties = KeySerializer.Configure(config, true);
+            var configWithoutValueSerializerProperties = ValueSerializer.Configure(config, false);
+
+            var configWithoutSerializerProperties = config.Where(item => 
+                configWithoutKeySerializerProperties.Any(ci => ci.Key == item.Key) &&
+                configWithoutValueSerializerProperties.Any(ci => ci.Key == item.Key)
+            );
+
+            producer = new Producer(
+                configWithoutSerializerProperties, 
+                manualPoll, 
+                disableDeliveryReports
+            );
+
             serializingProducer = producer.GetSerializingProducer(keySerializer, valueSerializer);
         }
 
@@ -1399,30 +1385,5 @@ namespace Confluent.Kafka
         /// </summary>
         public Metadata GetMetadata(bool allTopics, string topic)
             => producer.GetMetadata(allTopics, topic);
-
-        /// <summary>
-        ///     Adds one or more brokers to the Producer's list of initial
-        ///     bootstrap brokers. 
-        ///
-        ///     Note: Additional brokers are discovered automatically as 
-        ///     soon as the Producer connects to any broker by querying the 
-        ///     broker metadata. Calling this method is only required in 
-        ///     some scenarios where the address of all brokers in the 
-        ///     cluster changes.
-        /// </summary>
-        /// <param name="brokers">
-        ///     Coma-separated list of brokers in the same format as 
-        ///     the bootstrap.server configuration parameter.
-        /// </param>
-        /// <remarks>
-        ///     There is currently no API to remove existing configured, 
-        ///     added or learnt brokers.
-        /// </remarks>
-        /// <returns>
-        ///     The number of brokers added. This value includes brokers
-        ///     that may have been specified a second time.
-        /// </returns>
-        public int AddBrokers(string brokers)
-            => producer.AddBrokers(brokers);
     }
 }
