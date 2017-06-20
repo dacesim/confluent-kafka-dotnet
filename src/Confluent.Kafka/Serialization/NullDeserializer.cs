@@ -14,10 +14,6 @@
 //
 // Refer to LICENSE for more information.
 
-using System;
-using System.Collections.Generic;
-
-
 namespace Confluent.Kafka.Serialization
 {
     /// <summary>
@@ -30,14 +26,11 @@ namespace Confluent.Kafka.Serialization
         /// </summary>
         /// <param name="data">
         ///     The data to deserialize (must be null).
-        /// </param>        
-        /// <param name="topic">
-        ///     The topic associated with the data (ignored by this deserializer).
         /// </param>
         /// <returns>
         ///     null
         /// </returns>
-        public Null Deserialize(string topic, byte[] data)
+        public Null Deserialize(byte[] data)
         {
             if (data != null)
             {
@@ -46,9 +39,5 @@ namespace Confluent.Kafka.Serialization
 
             return null;
         }
-
-        /// <include file='../include_docs.xml' path='API/Member[@name="IDeserializer_Configure"]/*' />
-        public IEnumerable<KeyValuePair<string, object>> Configure(IEnumerable<KeyValuePair<string, object>> config, bool isKey)
-            => config;
     }
 }

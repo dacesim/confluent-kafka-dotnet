@@ -14,10 +14,6 @@
 //
 // Refer to LICENSE for more information.
 
-using System;
-using System.Collections.Generic;
-
-
 namespace Confluent.Kafka.Serialization
 {
     /// <summary>
@@ -25,22 +21,15 @@ namespace Confluent.Kafka.Serialization
     /// </summary>
     public class NullSerializer : ISerializer<Null>
     {
-        /// <param name="data">
+        /// <param name="val">
         ///     Can only be null (the <see cref="Null"/> class cannot be instantiated).
-        /// </param>
-        /// <param name="topic">
-        ///     The topic associated with the data (ignored by this serializer).
         /// </param>
         /// <returns>
         ///     null
         /// </returns>
-        public byte[] Serialize(string topic, Null data)
+        public byte[] Serialize(Null val)
         {
             return null;
         }
-
-        /// <include file='../include_docs.xml' path='API/Member[@name="ISerializer_Configure"]/*' />
-        public IEnumerable<KeyValuePair<string, object>> Configure(IEnumerable<KeyValuePair<string, object>> config, bool isKey)
-            => config;
     }
 }
