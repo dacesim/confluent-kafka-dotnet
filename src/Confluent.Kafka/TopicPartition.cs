@@ -91,14 +91,7 @@ namespace Confluent.Kafka
         ///     true if TopicPartition instances a and b are equal. false otherwise.
         /// </returns>
         public static bool operator ==(TopicPartition a, TopicPartition b)
-        {
-            if (object.ReferenceEquals(a, null))
-            {
-                return object.ReferenceEquals(b, null);
-            }
-
-            return a.Equals(b);
-        }
+            => a.Equals(b);
 
         /// <summary>
         ///     Tests whether TopicPartition instance a is not equal to TopicPartition instance b.
