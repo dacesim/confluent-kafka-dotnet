@@ -836,6 +836,8 @@ namespace Confluent.Kafka
             KeySerializer = keySerializer;
             ValueSerializer = valueSerializer;
 
+            // TODO: allow serializers to be set in the producer config IEnumerable<KeyValuePair<string, object>>.
+
             if (KeySerializer == null)
             {
                 if (typeof(TKey) != typeof(Null))
@@ -893,8 +895,8 @@ namespace Confluent.Kafka
         private Task<Message<TKey, TValue>> Produce(string topic, TKey key, TValue val, DateTime? timestamp, int partition, bool blockIfQueueFull)
         {
             var handler = new TypedTaskDeliveryHandlerShim(key, val);
-            var keyBytes = KeySerializer?.Serialize(topic, key);
-            var valBytes = ValueSerializer?.Serialize(topic, val);
+            var keyBytes = KeySerializer?.Serialize(key);
+            var valBytes = ValueSerializer?.Serialize(val);
             producer.Produce(topic, valBytes, 0, valBytes == null ? 0 : valBytes.Length, keyBytes, 0, keyBytes == null ? 0 : keyBytes.Length, timestamp, partition, blockIfQueueFull, handler);
             return handler.Task;
         }
@@ -946,8 +948,8 @@ namespace Confluent.Kafka
         private void Produce(string topic, TKey key, TValue val, DateTime? timestamp, int partition, bool blockIfQueueFull, IDeliveryHandler<TKey, TValue> deliveryHandler)
         {
             var handler = new TypedDeliveryHandlerShim(key, val, deliveryHandler);
-            var keyBytes = KeySerializer?.Serialize(topic, key);
-            var valBytes = ValueSerializer?.Serialize(topic, val);
+            var keyBytes = KeySerializer?.Serialize(key);
+            var valBytes = ValueSerializer?.Serialize(val);
             producer.Produce(topic, valBytes, 0, valBytes == null ? 0 : valBytes.Length, keyBytes, 0, keyBytes == null ? 0 : keyBytes.Length, timestamp, partition, blockIfQueueFull, handler);
         }
 
@@ -1005,20 +1007,7 @@ namespace Confluent.Kafka
             ISerializer<TValue> valueSerializer,
             bool manualPoll, bool disableDeliveryReports)
         {
-            var configWithoutKeySerializerProperties = keySerializer?.Configure(config, true) ?? config;
-            var configWithoutValueSerializerProperties = valueSerializer?.Configure(config, false) ?? config;
-
-            var configWithoutSerializerProperties = config.Where(item => 
-                configWithoutKeySerializerProperties.Any(ci => ci.Key == item.Key) &&
-                configWithoutValueSerializerProperties.Any(ci => ci.Key == item.Key)
-            );
-
-            producer = new Producer(
-                configWithoutSerializerProperties, 
-                manualPoll, 
-                disableDeliveryReports
-            );
-
+            producer = new Producer(config, manualPoll, disableDeliveryReports);
             serializingProducer = producer.GetSerializingProducer(keySerializer, valueSerializer);
         }
 
