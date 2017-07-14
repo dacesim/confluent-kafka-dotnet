@@ -24,31 +24,12 @@ namespace Confluent.Kafka.Impl
 {
     abstract class SafeHandleZeroIsInvalid : SafeHandle
     {
-        private string handleName;
+        internal SafeHandleZeroIsInvalid() : base(IntPtr.Zero, true) { }
 
-        internal SafeHandleZeroIsInvalid(string handleName) : base(IntPtr.Zero, true)
-        {
-            this.handleName = handleName;
-        }
-
-        internal SafeHandleZeroIsInvalid(string handleName, bool ownsHandle) : base(IntPtr.Zero, ownsHandle)
-        {
-            this.handleName = handleName;
-        }
+        internal SafeHandleZeroIsInvalid(bool ownsHandle) : base(IntPtr.Zero, ownsHandle) { }
 
         public override bool IsInvalid => handle == IntPtr.Zero;
 
-        /// <summary>
-        ///     Prevent AccessViolationException when handle has already been closed.
-        ///     Should be called at start of every function using handle,
-        ///     except in ReleaseHandle.
-        /// </summary>
-        protected void ThrowIfHandleClosed()
-        {
-            if (IsClosed)
-            {
-                throw new ObjectDisposedException($"{handleName} handle is closed", innerException: null);
-            }
-        }
+        protected override bool ReleaseHandle() => true;
     }
 }
