@@ -1,4 +1,4 @@
-﻿// Copyright 2016-2017 Confluent Inc.
+// Copyright 2016-2017 Confluent Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,44 +21,56 @@ using System.Collections.Generic;
 namespace Confluent.Kafka.Serialization
 {
     /// <summary>
-    ///     A deserializer for big endian encoded (network byte ordered) <see cref="System.Int64"/> values.
+    ///     A deserializer for big endian encoded (network byte ordered) System.Double values.
     /// </summary>
-    public class LongDeserializer : IDeserializer<long>
+    public class DoubleDeserializer : IDeserializer<double>
     {
         /// <summary>
-        ///     Deserializes a big endian encoded (network byte ordered) <see cref="System.Int64"/> value from a byte array.
+        ///     Deserializes a big endian encoded (network byte ordered) System.Double value from a byte array.
         /// </summary>
-        /// <param name="data">
-        ///     A byte array containing the serialized <see cref="System.Int64"/> value (big endian encoding)
-        /// </param>
         /// <param name="topic">
         ///     The topic associated with the data (ignored by this deserializer).
         /// </param>
+        /// <param name="data">
+        ///     A byte array containing the serialized System.Double value (big endian encoding).
+        /// </param>
         /// <returns>
-        ///     The deserialized <see cref="System.Int64"/> value.
+        ///     The deserialized System.Double value.
         /// </returns>
-        public long Deserialize(string topic, byte[] data)
+        public double Deserialize(string topic, byte[] data)
         {
             if (data == null)
             {
-                throw new ArgumentException($"Arg [{nameof(data)}] is null");
+                throw new ArgumentNullException($"Arg {nameof(data)} is null");
             }
 
             if (data.Length != 8)
             {
-                throw new ArgumentException($"Size of {nameof(data)} received by LongDeserializer is not 8");
+                throw new ArgumentException($"Size of {nameof(data)} received by {nameof(DoubleDeserializer)} is not 8");
             }
 
             // network byte order -> big endian -> most significant byte in the smallest address.
-            long result = ((long)data[0]) << 56 |
-                ((long)(data[1])) << 48 |
-                ((long)(data[2])) << 40 |
-                ((long)(data[3])) << 32 |
-                ((long)(data[4])) << 24 |
-                ((long)(data[5])) << 16 |
-                ((long)(data[6])) << 8 |
-                (data[7]);
-            return result;
+            if (BitConverter.IsLittleEndian)
+            {
+                unsafe
+                {
+                    double result = default(double);
+                    byte* p = (byte*)(&result);
+                    *p++ = data[7];
+                    *p++ = data[6];
+                    *p++ = data[5];
+                    *p++ = data[4];
+                    *p++ = data[3];
+                    *p++ = data[2];
+                    *p++ = data[1];
+                    *p++ = data[0];
+                    return result;
+                }
+            }
+            else
+            {
+                return BitConverter.ToDouble(data, 0);
+            }
         }
 
         /// <include file='../include_docs.xml' path='API/Member[@name="IDeserializer_Configure"]/*' />
