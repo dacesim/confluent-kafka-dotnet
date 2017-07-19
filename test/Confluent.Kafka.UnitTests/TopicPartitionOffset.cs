@@ -18,7 +18,7 @@ using Xunit;
 using System.Collections.Generic;
 
 
-namespace Confluent.Kafka.UnitTests
+namespace Confluent.Kafka.Tests
 {
     public class TopicPartitionOffsetTests
     {

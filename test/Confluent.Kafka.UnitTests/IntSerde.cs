@@ -19,9 +19,9 @@ using Xunit;
 using Confluent.Kafka.Serialization;
 
 
-namespace Confluent.Kafka.UnitTests.Serialization
+namespace Confluent.Kafka.Tests
 {
-    public class IntTests
+    public class IntSerdeTests
     {
         private static readonly int[] toTest = new int[]
         {
@@ -36,7 +36,7 @@ namespace Confluent.Kafka.UnitTests.Serialization
         public void IsBigEndian()
         {
             var serializer = new IntSerializer();
-            var bytes = serializer.Serialize("topic", 42);
+            var bytes = serializer.Serialize(42);
             Assert.Equal(bytes.Length, 4);
             // most significant byte in smallest address.
             Assert.Equal(bytes[0], 0);
@@ -52,7 +52,7 @@ namespace Confluent.Kafka.UnitTests.Serialization
                 var bytes1 = BitConverter.GetBytes(networkOrder);
 
                 var serializer = new IntSerializer();
-                var bytes2 = serializer.Serialize("topic", theInt);
+                var bytes2 = serializer.Serialize(theInt);
 
                 Assert.Equal(bytes1.Length, bytes2.Length);
 
@@ -71,9 +71,10 @@ namespace Confluent.Kafka.UnitTests.Serialization
 
             foreach (int theInt in toTest)
             {
-                var reconstructed = deserializer.Deserialize("topic", serializer.Serialize("topic", theInt));
+                var reconstructed = deserializer.Deserialize(serializer.Serialize(theInt));
                 Assert.Equal(theInt, reconstructed);
             }
         }
     }
+
 }

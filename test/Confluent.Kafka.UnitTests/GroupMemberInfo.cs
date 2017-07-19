@@ -17,7 +17,7 @@
 using Xunit;
 
 
-namespace Confluent.Kafka.UnitTests
+namespace Confluent.Kafka.Tests
 {
     public class GroupMemberInfoTests
     {

@@ -33,7 +33,7 @@ namespace Confluent.Kafka.IntegrationTests
             {
                 var dr = await producer.ProduceAsync(topic, new byte[] {42}, new byte[] {44});
                 Assert.Equal(ErrorCode.NoError, dr.Error.Code);
-                producer.Flush(TimeSpan.FromSeconds(10));
+                producer.Flush(30);
             }
         }
 

@@ -21,7 +21,7 @@ using System.Collections.Generic;
 using Confluent.Kafka.Serialization;
 
 
-namespace Confluent.Kafka.UnitTests
+namespace Confluent.Kafka.Tests
 {
     public class ConsumerTests
     {
