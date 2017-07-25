@@ -1,4 +1,4 @@
-// Copyright 2016-2017 Confluent Inc.
+﻿// Copyright 2016-2017 Confluent Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,22 +21,41 @@ using System.Collections.Generic;
 namespace Confluent.Kafka.Serialization
 {
     /// <summary>
-    ///     A dummy serializer for use with values that must be null (the <see cref="Null"/> class cannot be instantiated).
+    ///     System.Single serializer. Byte order of serialized data is big endian (network byte order).
     /// </summary>
-    public class NullSerializer : ISerializer<Null>
+    public class FloatSerializer : ISerializer<float>
     {
-        /// <param name="data">
-        ///     Can only be null (the <see cref="Null"/> class cannot be instantiated).
-        /// </param>
+        /// <summary>
+        ///     Serializes the specified System.Single value to a byte array of length 4. Byte order is big endian (network byte order).
+        /// </summary>
         /// <param name="topic">
         ///     The topic associated with the data (ignored by this serializer).
         /// </param>
+        /// <param name="data">
+        ///     The System.Single value to serialize.
+        /// </param>
         /// <returns>
-        ///     null
+        ///     The System.Single value <paramref name="data" /> encoded as a byte array of length 4 (network byte order).
         /// </returns>
-        public byte[] Serialize(string topic, Null data)
+        public byte[] Serialize(string topic, float data)
         {
-            return null;
+            if (BitConverter.IsLittleEndian)
+            {
+                unsafe
+                {
+                    byte[] result = new byte[4];
+                    byte* p = (byte*)(&data);
+                    result[3] = *p++;
+                    result[2] = *p++;
+                    result[1] = *p++;
+                    result[0] = *p++;
+                    return result;
+                }
+            }
+            else
+            {
+                return BitConverter.GetBytes(data);
+            }
         }
 
         /// <include file='../include_docs.xml' path='API/Member[@name="ISerializer_Configure"]/*' />

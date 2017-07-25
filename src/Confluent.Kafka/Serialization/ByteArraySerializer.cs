@@ -1,4 +1,4 @@
-// Copyright 2016-2017 Confluent Inc.
+﻿// Copyright 2016-2017 Confluent Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,29 +14,31 @@
 //
 // Refer to LICENSE for more information.
 
-using System;
 using System.Collections.Generic;
 
 
 namespace Confluent.Kafka.Serialization
 {
     /// <summary>
-    ///     A dummy serializer for use with values that must be null (the <see cref="Null"/> class cannot be instantiated).
+    ///     System.Byte[] serializer. This serializer simply passes through the provided System.Byte[] value.
     /// </summary>
-    public class NullSerializer : ISerializer<Null>
+    public class ByteArraySerializer : ISerializer<byte[]>
     {
-        /// <param name="data">
-        ///     Can only be null (the <see cref="Null"/> class cannot be instantiated).
-        /// </param>
+        /// <summary>
+        ///     Serializes the specified System.Byte[] value (or null) to a byte array. Byte order is original order. 
+        /// </summary>
         /// <param name="topic">
         ///     The topic associated with the data (ignored by this serializer).
         /// </param>
+        /// <param name="data">
+        ///     The System.Byte[] value to serialize (or null).
+        /// </param>
         /// <returns>
-        ///     null
+        ///     The System.Byte[] value <paramref name="data" /> encoded as a byte array. 
         /// </returns>
-        public byte[] Serialize(string topic, Null data)
+        public byte[] Serialize(string topic, byte[] data)
         {
-            return null;
+            return data;
         }
 
         /// <include file='../include_docs.xml' path='API/Member[@name="ISerializer_Configure"]/*' />

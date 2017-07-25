@@ -65,8 +65,6 @@ namespace Confluent.Kafka
             KeyDeserializer = keyDeserializer;
             ValueDeserializer = valueDeserializer;
 
-            // TODO: allow deserializers to be set in the producer config IEnumerable<KeyValuePair<string, object>>.
-
             if (KeyDeserializer == null)
             {
                 if (typeof(TKey) != typeof(Null))
@@ -87,7 +85,15 @@ namespace Confluent.Kafka
                 ValueDeserializer = (IDeserializer<TValue>)new NullDeserializer();
             }
 
-            consumer = new Consumer(config);
+            var configWithoutKeyDeserializerProperties = KeyDeserializer.Configure(config, true);
+            var configWithoutValueDeserializerProperties = ValueDeserializer.Configure(config, false);
+
+            var configWithoutDeserializerProperties = config.Where(item => 
+                configWithoutKeyDeserializerProperties.Any(ci => ci.Key == item.Key) &&
+                configWithoutValueDeserializerProperties.Any(ci => ci.Key == item.Key)
+            );
+
+            consumer = new Consumer(configWithoutDeserializerProperties);
 
             consumer.OnConsumeError += (sender, msg) 
                 => OnConsumeError?.Invoke(this, msg);
@@ -604,6 +610,10 @@ namespace Confluent.Kafka
         /// </returns>
         public WatermarkOffsets QueryWatermarkOffsets(TopicPartition topicPartition)
             => consumer.QueryWatermarkOffsets(topicPartition);
+
+        /// <include file='include_docs.xml' path='API/Member[@name="Consumer_OffsetsForTimes"]/*' />
+        public IEnumerable<TopicPartitionOffsetError> OffsetsForTimes(IEnumerable<TopicPartitionTimestamp> timestampsToSearch, TimeSpan timeout)
+            => consumer.OffsetsForTimes(timestampsToSearch, timeout);
 
         /// <summary>
         ///     Refer to <see cref="Confluent.Kafka.Producer.GetMetadata(bool,string,int)" /> for more information.
@@ -1233,6 +1243,10 @@ namespace Confluent.Kafka
         /// </returns>
         public WatermarkOffsets GetWatermarkOffsets(TopicPartition topicPartition)
             => kafkaHandle.GetWatermarkOffsets(topicPartition.Topic, topicPartition.Partition);
+
+        /// <include file='include_docs.xml' path='API/Member[@name="Consumer_OffsetsForTimes"]/*' />
+        public IEnumerable<TopicPartitionOffsetError> OffsetsForTimes(IEnumerable<TopicPartitionTimestamp> timestampsToSearch, TimeSpan timeout)
+            => kafkaHandle.OffsetsForTimes(timestampsToSearch, timeout.TotalMillisecondsAsInt());
 
         /// <summary>
         ///     Query the Kafka cluster for low (oldest/beginning) and high (newest/end)
