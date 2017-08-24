@@ -31,6 +31,12 @@ namespace Confluent.Kafka
 {
     /// <summary>
     ///     Implements a high-level Apache Kafka producer (without serialization).
+    ///
+    ///     [UNSTABLE-API] We are considering making this class private in a future version 
+    ///     so as to limit API surface area. Prefer to use the serializing producer
+    ///     <see cref="Confluent.Kafka.Producer{TKey,TValue}" /> where possible. Please let us know
+    ///     if you find the <see cref="GetSerializingProducer{TKey,TValue}(ISerializer{TKey},ISerializer{TValue})" /> method
+    ///     useful.
     /// </summary>
     public class Producer : IDisposable
     {
@@ -38,7 +44,6 @@ namespace Confluent.Kafka
         private bool disableDeliveryReports;
 
         internal const int RD_KAFKA_PARTITION_UA = -1;
-        internal const long RD_KAFKA_NO_TIMESTAMP = 0;
 
         private IEnumerable<KeyValuePair<string, object>> topicConfig;
 
@@ -88,14 +93,10 @@ namespace Confluent.Kafka
             OnLog.Invoke(this, new LogMessage(name, level, fac, buf));
         }
 
-        /// <remarks>
-        ///     getKafkaTopicHandle() is now only required by GetMetadata() which still requires that 
-        ///     topic is specified via a handle rather than a string name (note that getKafkaTopicHandle() 
-        ///     was also formerly required by the ProduceAsync methods). Eventually we would like to 
-        ///     depreciate this method as well as the SafeTopicHandle class.
-        /// </remarks>
         private SafeTopicHandle getKafkaTopicHandle(string topic)
         {
+            // TODO: We should consider getting rid of these and add proper support in librdkafka itself
+            //       (producev() with RD_KAFKA_V_TOPIC() is one step closer)
             if (topicHandles.ContainsKey(topic))
             {
                 return topicHandles[topic];
@@ -205,6 +206,8 @@ namespace Confluent.Kafka
             Int32 partition, bool blockIfQueueFull,
             IDeliveryHandler deliveryHandler)
         {
+            SafeTopicHandle topicHandle = getKafkaTopicHandle(topic);
+
             if (!this.disableDeliveryReports && deliveryHandler != null)
             {
                 // Passes the TaskCompletionSource to the delivery report callback via the msg_opaque pointer
@@ -212,33 +215,32 @@ namespace Confluent.Kafka
                 var gch = GCHandle.Alloc(deliveryCompletionSource);
                 var ptr = GCHandle.ToIntPtr(gch);
 
-                var err = kafkaHandle.Produce(
-                    topic,
-                    val, valOffset, valLength,
-                    key, keyOffset, keyLength,
-                    partition,
-                    timestamp == null ? RD_KAFKA_NO_TIMESTAMP : Timestamp.DateTimeToUnixTimestampMs(timestamp.Value),
-                    ptr, blockIfQueueFull);
-                if (err != ErrorCode.NoError)
+                if (topicHandle.Produce(
+                    val, valOffset, valLength, 
+                    key, keyOffset, keyLength, 
+                    partition, 
+                    timestamp == null ? null : (long?)Timestamp.DateTimeToUnixTimestampMs(timestamp.Value), 
+                    ptr, blockIfQueueFull) != 0)
                 {
+                    var err = LibRdKafka.last_error();
                     gch.Free();
                     throw new KafkaException(err);
                 }
+
+                return;
             }
-            else
+
+            if (topicHandle.Produce(
+                val, valOffset, valLength, 
+                key, keyOffset, keyLength, 
+                partition, 
+                timestamp == null ? null : (long?)Timestamp.DateTimeToUnixTimestampMs(timestamp.Value), 
+                IntPtr.Zero, blockIfQueueFull) != 0)
             {
-                var err = kafkaHandle.Produce(
-                    topic,
-                    val, valOffset, valLength,
-                    key, keyOffset, keyLength,
-                    partition,
-                    timestamp == null ? RD_KAFKA_NO_TIMESTAMP : Timestamp.DateTimeToUnixTimestampMs(timestamp.Value),
-                    IntPtr.Zero, blockIfQueueFull);
-                if (err != ErrorCode.NoError)
-                {
-                    throw new KafkaException(err);
-                }
+                throw new KafkaException(LibRdKafka.last_error());
             }
+
+            return;
         }
 
         private Task<Message> Produce(
@@ -834,6 +836,8 @@ namespace Confluent.Kafka
             KeySerializer = keySerializer;
             ValueSerializer = valueSerializer;
 
+            // TODO: allow serializers to be set in the producer config IEnumerable<KeyValuePair<string, object>>.
+
             if (KeySerializer == null)
             {
                 if (typeof(TKey) != typeof(Null))
@@ -891,8 +895,8 @@ namespace Confluent.Kafka
         private Task<Message<TKey, TValue>> Produce(string topic, TKey key, TValue val, DateTime? timestamp, int partition, bool blockIfQueueFull)
         {
             var handler = new TypedTaskDeliveryHandlerShim(key, val);
-            var keyBytes = KeySerializer?.Serialize(topic, key);
-            var valBytes = ValueSerializer?.Serialize(topic, val);
+            var keyBytes = KeySerializer?.Serialize(key);
+            var valBytes = ValueSerializer?.Serialize(val);
             producer.Produce(topic, valBytes, 0, valBytes == null ? 0 : valBytes.Length, keyBytes, 0, keyBytes == null ? 0 : keyBytes.Length, timestamp, partition, blockIfQueueFull, handler);
             return handler.Task;
         }
@@ -944,8 +948,8 @@ namespace Confluent.Kafka
         private void Produce(string topic, TKey key, TValue val, DateTime? timestamp, int partition, bool blockIfQueueFull, IDeliveryHandler<TKey, TValue> deliveryHandler)
         {
             var handler = new TypedDeliveryHandlerShim(key, val, deliveryHandler);
-            var keyBytes = KeySerializer?.Serialize(topic, key);
-            var valBytes = ValueSerializer?.Serialize(topic, val);
+            var keyBytes = KeySerializer?.Serialize(key);
+            var valBytes = ValueSerializer?.Serialize(val);
             producer.Produce(topic, valBytes, 0, valBytes == null ? 0 : valBytes.Length, keyBytes, 0, keyBytes == null ? 0 : keyBytes.Length, timestamp, partition, blockIfQueueFull, handler);
         }
 
@@ -1003,20 +1007,7 @@ namespace Confluent.Kafka
             ISerializer<TValue> valueSerializer,
             bool manualPoll, bool disableDeliveryReports)
         {
-            var configWithoutKeySerializerProperties = keySerializer?.Configure(config, true) ?? config;
-            var configWithoutValueSerializerProperties = valueSerializer?.Configure(config, false) ?? config;
-
-            var configWithoutSerializerProperties = config.Where(item => 
-                configWithoutKeySerializerProperties.Any(ci => ci.Key == item.Key) &&
-                configWithoutValueSerializerProperties.Any(ci => ci.Key == item.Key)
-            );
-
-            producer = new Producer(
-                configWithoutSerializerProperties, 
-                manualPoll, 
-                disableDeliveryReports
-            );
-
+            producer = new Producer(config, manualPoll, disableDeliveryReports);
             serializingProducer = producer.GetSerializingProducer(keySerializer, valueSerializer);
         }
 

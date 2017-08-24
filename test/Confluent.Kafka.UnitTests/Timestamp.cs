@@ -18,7 +18,7 @@ using System;
 using Xunit;
 
 
-namespace Confluent.Kafka.UnitTests
+namespace Confluent.Kafka.Tests
 {
     public class TimestampTests
     {

@@ -65,6 +65,8 @@ namespace Confluent.Kafka
             KeyDeserializer = keyDeserializer;
             ValueDeserializer = valueDeserializer;
 
+            // TODO: allow deserializers to be set in the producer config IEnumerable<KeyValuePair<string, object>>.
+
             if (KeyDeserializer == null)
             {
                 if (typeof(TKey) != typeof(Null))
@@ -85,15 +87,7 @@ namespace Confluent.Kafka
                 ValueDeserializer = (IDeserializer<TValue>)new NullDeserializer();
             }
 
-            var configWithoutKeyDeserializerProperties = KeyDeserializer.Configure(config, true);
-            var configWithoutValueDeserializerProperties = ValueDeserializer.Configure(config, false);
-
-            var configWithoutDeserializerProperties = config.Where(item => 
-                configWithoutKeyDeserializerProperties.Any(ci => ci.Key == item.Key) &&
-                configWithoutValueDeserializerProperties.Any(ci => ci.Key == item.Key)
-            );
-
-            consumer = new Consumer(configWithoutDeserializerProperties);
+            consumer = new Consumer(config);
 
             consumer.OnConsumeError += (sender, msg) 
                 => OnConsumeError?.Invoke(this, msg);
@@ -103,6 +97,12 @@ namespace Confluent.Kafka
         ///     Poll for new messages / consumer events. Blocks until a new 
         ///     message or event is ready to be handled or the timeout period
         ///     <paramref name="millisecondsTimeout" /> has elapsed.
+        ///     
+        ///     [UNSTABLE-API] - prefer to use <see cref="Poll()"/> / 
+        ///     <see cref="OnMessage"/> instead of Consume. We may remove
+        ///     this method in the future to limit API surface area. 
+        ///     Please let us know if you have a use case where Consume 
+        ///     more convenient than Poll.
         /// </summary>
         /// <param name="message">
         ///     A consumed message, or null if no messages are 
@@ -157,6 +157,8 @@ namespace Confluent.Kafka
 
         /// <summary>
         ///     Refer to <see cref="Consume(out Message{TKey, TValue}, int)" />.
+        ///     
+        ///     [UNSTABLE-API] - prefer to use <see cref="Poll()"/> / <see cref="OnMessage"/> instead of this method.
         /// </summary>
         public bool Consume(out Message<TKey, TValue> message, TimeSpan timeout)
             => Consume(out message, timeout.TotalMillisecondsAsInt());
@@ -452,14 +454,6 @@ namespace Confluent.Kafka
         public void Dispose()
             => consumer.Dispose();
 
-        /// <include file='include_docs.xml' path='API/Member[@name="Consumer_Pause"]/*' />
-        public List<TopicPartitionError> Pause(IEnumerable<TopicPartition> partitions)
-            => consumer.Pause(partitions);
-
-        /// <include file='include_docs.xml' path='API/Member[@name="Consumer_Resume"]/*' />
-        public List<TopicPartitionError> Resume(IEnumerable<TopicPartition> partitions)
-            => consumer.Resume(partitions);
-
         /// <summary>
         ///     Retrieve current committed offsets for topics + partitions.
         ///
@@ -610,10 +604,6 @@ namespace Confluent.Kafka
         /// </returns>
         public WatermarkOffsets QueryWatermarkOffsets(TopicPartition topicPartition)
             => consumer.QueryWatermarkOffsets(topicPartition);
-
-        /// <include file='include_docs.xml' path='API/Member[@name="Consumer_OffsetsForTimes"]/*' />
-        public IEnumerable<TopicPartitionOffsetError> OffsetsForTimes(IEnumerable<TopicPartitionTimestamp> timestampsToSearch, TimeSpan timeout)
-            => consumer.OffsetsForTimes(timestampsToSearch, timeout);
 
         /// <summary>
         ///     Refer to <see cref="Confluent.Kafka.Producer.GetMetadata(bool,string,int)" /> for more information.
@@ -972,6 +962,12 @@ namespace Confluent.Kafka
         ///     Poll for new messages / consumer events. Blocks until a new 
         ///     message or event is ready to be handled or the timeout period
         ///     <paramref name="millisecondsTimeout" /> has elapsed.
+        ///     
+        ///     [UNSTABLE-API] - prefer to use <see cref="Poll()"/> / 
+        ///     <see cref="OnMessage"/> instead of Consume. We may remove
+        ///     this method in the future to limit API surface area. 
+        ///     Please let us know if you have a use case where Consume 
+        ///     more convenient than Poll.
         /// </summary>
         /// <param name="message">
         ///     A consumed message, or null if no messages are 
@@ -1014,6 +1010,8 @@ namespace Confluent.Kafka
 
         /// <summary>
         ///     Refer to <see cref="Consume(out Message, int)" />
+        ///     
+        ///     [UNSTABLE-API] - prefer to use <see cref="Poll()"/> / <see cref="OnMessage"/> instead of this method.
         /// </summary>
         public bool Consume(out Message message, TimeSpan timeout)
             => Consume(out message, timeout.TotalMillisecondsAsInt());
@@ -1104,14 +1102,6 @@ namespace Confluent.Kafka
         /// </summary>
         public Task<CommittedOffsets> CommitAsync(IEnumerable<TopicPartitionOffset> offsets)
             => kafkaHandle.CommitAsync(offsets);
-
-        /// <include file='include_docs.xml' path='API/Member[@name="Consumer_Pause"]/*' />
-        public List<TopicPartitionError> Pause(IEnumerable<TopicPartition> partitions)
-            => kafkaHandle.Pause(partitions);
-
-        /// <include file='include_docs.xml' path='API/Member[@name="Consumer_Resume"]/*' />
-        public List<TopicPartitionError> Resume(IEnumerable<TopicPartition> partitions)
-            => kafkaHandle.Resume(partitions);
 
         /// <summary>
         ///     Retrieve current committed offsets for topics + partitions.
@@ -1243,10 +1233,6 @@ namespace Confluent.Kafka
         /// </returns>
         public WatermarkOffsets GetWatermarkOffsets(TopicPartition topicPartition)
             => kafkaHandle.GetWatermarkOffsets(topicPartition.Topic, topicPartition.Partition);
-
-        /// <include file='include_docs.xml' path='API/Member[@name="Consumer_OffsetsForTimes"]/*' />
-        public IEnumerable<TopicPartitionOffsetError> OffsetsForTimes(IEnumerable<TopicPartitionTimestamp> timestampsToSearch, TimeSpan timeout)
-            => kafkaHandle.OffsetsForTimes(timestampsToSearch, timeout.TotalMillisecondsAsInt());
 
         /// <summary>
         ///     Query the Kafka cluster for low (oldest/beginning) and high (newest/end)

@@ -18,7 +18,7 @@ using Xunit;
 using System.Collections.Generic;
 
 
-namespace Confluent.Kafka.UnitTests
+namespace Confluent.Kafka.Tests
 {
     public class TopicPartitionOffsetErrorTests
     {
@@ -99,17 +99,6 @@ namespace Confluent.Kafka.UnitTests
 
             Assert.Equal(tpoe.TopicPartition, new TopicPartition("mytopic", 42));
             Assert.Equal(tpoe.TopicPartitionOffset, new TopicPartitionOffset("mytopic", 42, 107));
-        }
-
-        [Fact]
-        public void ExplicitCast()
-        {
-            var tpoe = new TopicPartitionOffsetError("mytopic", 42, 107, ErrorCode.NoError);
-            var tpo = (TopicPartitionOffset) tpoe;
-            Assert.Equal(tpoe.TopicPartitionOffset, tpo);
-
-            tpoe = new TopicPartitionOffsetError("mytopic", 42, 107, ErrorCode.Local_BadMsg);
-            Assert.Throws<KafkaException>(() => (TopicPartitionOffset) tpoe);
         }
     }
 }

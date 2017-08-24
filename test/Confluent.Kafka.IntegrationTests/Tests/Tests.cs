@@ -14,12 +14,11 @@
 //
 // Refer to LICENSE for more information.
 
-using System;
+
 using System.Collections.Generic;
 using System.IO;
+using Newtonsoft.Json;
 using System.Reflection;
-using Newtonsoft.Json.Linq;
-
 
 namespace Confluent.Kafka.IntegrationTests
 {
@@ -27,32 +26,17 @@ namespace Confluent.Kafka.IntegrationTests
     {
         private static List<object[]> kafkaParameters;
 
-        static Tests()
-        {
-            // Quick fix for https://github.com/Microsoft/vstest/issues/918
-            // Some tests will log using ConsoleLogger which print to standard Err by default, bugged on vstest
-            // If we have error in test, they may hang
-            // Write to standard output solve the issue
-            Console.SetError(Console.Out);
-        }
-
         public static IEnumerable<object[]> KafkaParameters()
         {
             if (kafkaParameters == null)
             {
-                var assemblyPath = typeof(Tests).GetTypeInfo().Assembly.Location;
+                var codeBase = typeof(Tests).GetTypeInfo().Assembly.CodeBase;
+                // TODO: Better way to turn Uri into path?
+                var assemblyPath = codeBase.Substring("file://".Length);
                 var assemblyDirectory = Path.GetDirectoryName(assemblyPath);
                 var jsonPath = Path.Combine(assemblyDirectory, "kafka.parameters.json");
-                var json = JObject.Parse(File.ReadAllText(jsonPath));
-                kafkaParameters = new List<object[]>
-                {
-                    new object[]
-                    {
-                        json["bootstrapServers"].ToString(),
-                        json["topic"].ToString(),
-                        json["partitionedTopic"].ToString()
-                    }
-                };
+                dynamic json = JsonConvert.DeserializeObject(File.ReadAllText(jsonPath));
+                kafkaParameters = new List<object[]>() { new object[] { json.bootstrapServers.ToString(), json.topic.ToString(), json.partitionedTopic.ToString() } };
             }
             return kafkaParameters;
         }
