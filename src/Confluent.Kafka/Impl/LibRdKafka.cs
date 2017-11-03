@@ -31,8 +31,11 @@ namespace Confluent.Kafka.Impl
 {
     internal static class LibRdKafka
     {
-        //min librdkafka version, to change when binding to new function are added
+        // min librdkafka version, to change when binding to new function are added
         const long minVersion = 0x000903ff;
+
+        // max length for error strings built by librdkafka
+        internal const int MaxErrorStringLength = 512;
 
 #if NET45 || NET46
         [Flags]
@@ -148,6 +151,7 @@ namespace Confluent.Kafka.Impl
             _poll_set_consumer = NativeMethods.rd_kafka_poll_set_consumer;
             _query_watermark_offsets = NativeMethods.rd_kafka_query_watermark_offsets;
             _get_watermark_offsets = NativeMethods.rd_kafka_get_watermark_offsets;
+            _offsets_for_times = NativeMethods.rd_kafka_offsets_for_times;
             _mem_free = NativeMethods.rd_kafka_mem_free;
             _subscribe = NativeMethods.rd_kafka_subscribe;
             _unsubscribe = NativeMethods.rd_kafka_unsubscribe;
@@ -159,8 +163,9 @@ namespace Confluent.Kafka.Impl
             _commit = NativeMethods.rd_kafka_commit;
             _commit_queue = NativeMethods.rd_kafka_commit_queue;
             _committed = NativeMethods.rd_kafka_committed;
+            _pause_partitions = NativeMethods.rd_kafka_pause_partitions;
+            _resume_partitions = NativeMethods.rd_kafka_resume_partitions;
             _position = NativeMethods.rd_kafka_position;
-            _produce = NativeMethods.rd_kafka_produce;
             _producev = NativeMethods.rd_kafka_producev;
             _flush = NativeMethods.rd_kafka_flush;
             _metadata = NativeMethods.rd_kafka_metadata;
@@ -178,7 +183,8 @@ namespace Confluent.Kafka.Impl
             _event_destroy = NativeMethods.rd_kafka_event_destroy;
             _queue_poll = NativeMethods.rd_kafka_queue_poll;
 
-            if ((long) version() < minVersion) {
+            if ((long)version() < minVersion)
+            {
                 throw new FileLoadException($"Invalid librdkafka version {(long)version():x}, expected at least {minVersion:x}");
             }
         }
@@ -391,6 +397,11 @@ namespace Confluent.Kafka.Impl
                 out long low, out long high)
             => _get_watermark_offsets(rk, topic, partition, out low, out high);
 
+        private delegate ErrorCode OffsetsForTimes(IntPtr rk, IntPtr offsets, IntPtr timeout_ms);
+        private static OffsetsForTimes _offsets_for_times;
+        internal static ErrorCode offsets_for_times(IntPtr rk, IntPtr offsets, IntPtr timeout_ms)
+            => _offsets_for_times(rk, offsets, timeout_ms);
+
         private static Action<IntPtr, IntPtr> _mem_free;
         internal static void mem_free(IntPtr rk, IntPtr ptr)
             => _mem_free(rk, ptr);
@@ -431,6 +442,14 @@ namespace Confluent.Kafka.Impl
             CommitDelegate cb, IntPtr opaque)
             => _commit_queue(rk, offsets, rkqu, cb, opaque);
 
+        private static Func<IntPtr, IntPtr, ErrorCode> _pause_partitions;
+        internal static ErrorCode pause_partitions(IntPtr rk, IntPtr partitions)
+            => _pause_partitions(rk, partitions);
+
+        private static Func<IntPtr, IntPtr, ErrorCode> _resume_partitions;
+        internal static ErrorCode resume_partitions(IntPtr rk, IntPtr partitions)
+            => _resume_partitions(rk, partitions);
+
         private static Func<IntPtr, IntPtr, IntPtr, ErrorCode> _committed;
         internal static ErrorCode committed(IntPtr rk, IntPtr partitions, IntPtr timeout_ms)
             => _committed(rk, partitions, timeout_ms);
@@ -439,29 +458,53 @@ namespace Confluent.Kafka.Impl
         internal static ErrorCode position(IntPtr rk, IntPtr partitions)
             => _position(rk, partitions);
 
-        private static Func<IntPtr, int, IntPtr, IntPtr, UIntPtr, IntPtr, UIntPtr, IntPtr, IntPtr> _produce;
-        internal static IntPtr produce(
-                IntPtr rkt,
-                int partition,
-                IntPtr msgflags,
-                IntPtr val, UIntPtr len,
-                IntPtr key, UIntPtr keylen,
-                IntPtr msg_opaque)
-            => _produce(rkt, partition, msgflags, val, len, key, keylen, msg_opaque);
+        /// <summary>
+        ///     Var-arg tag types, used in producev
+        /// </summary>
+        private enum ProduceVarTag
+        {
+            End,       // va-arg sentinel
+            Topic,     // (const char *) Topic name
+            Rkt,       // (rd_kafka_topic_t *) Topic handle
+            Partition, // (int32_t) Partition
+            Value,     // (void *, size_t) Message value (payload)
+            Key,       // (void *, size_t) Message key
+            Opaque,    // (void *) Application opaque
+            MsgFlags,  // (int) RD_KAFKA_MSG_F_.. flags
+            Timestamp, // (int64_t) Milliseconds since epoch UTC
+        }
 
-        private static Func<IntPtr, int, IntPtr, IntPtr, UIntPtr, IntPtr, UIntPtr, long, IntPtr, IntPtr> _producev;
-        internal static IntPtr producev(
-                IntPtr rkt,
+        private delegate ErrorCode Producev(IntPtr rk,
+                ProduceVarTag topicTag, string topic,
+                ProduceVarTag partitionTag, int partition,
+                ProduceVarTag vaTag, IntPtr val, UIntPtr len,
+                ProduceVarTag keyTag, IntPtr key, UIntPtr keylen,
+                ProduceVarTag msgflagsTag, IntPtr msgflags,
+                ProduceVarTag msg_opaqueTag, IntPtr msg_opaque,
+                ProduceVarTag timestampTag, long timestamp,
+                ProduceVarTag endTag);
+        private static Producev _producev;
+        internal static ErrorCode producev(
+                IntPtr rk,
+                string topic,
                 int partition,
                 IntPtr msgflags,
                 IntPtr val, UIntPtr len,
                 IntPtr key, UIntPtr keylen,
                 long timestamp,
                 IntPtr msg_opaque)
-            => _producev(rkt, partition, msgflags, val, len, key, keylen, timestamp, msg_opaque);
+            => _producev(rk,
+                    ProduceVarTag.Topic, topic,
+                    ProduceVarTag.Partition, partition,
+                    ProduceVarTag.Value, val, len,
+                    ProduceVarTag.Key, key, keylen,
+                    ProduceVarTag.Opaque, msg_opaque,
+                    ProduceVarTag.MsgFlags, msgflags,
+                    ProduceVarTag.Timestamp, timestamp,
+                    ProduceVarTag.End);
 
-        internal delegate ErrorCode Flush(IntPtr rk, IntPtr timeout_ms);
-        internal static Flush _flush;
+        private delegate ErrorCode Flush(IntPtr rk, IntPtr timeout_ms);
+        private static Flush _flush;
         internal static ErrorCode flush(IntPtr rk, IntPtr timeout_ms)
             => _flush(rk, timeout_ms);
 
@@ -697,7 +740,7 @@ namespace Confluent.Kafka.Impl
             internal static extern /* const char * */ IntPtr rd_kafka_topic_name(IntPtr rkt);
 
             [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-            internal static extern ErrorCode rd_kafka_poll_set_consumer (IntPtr rk);
+            internal static extern ErrorCode rd_kafka_poll_set_consumer(IntPtr rk);
 
             [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
             internal static extern IntPtr rd_kafka_poll(IntPtr rk, IntPtr timeout_ms);
@@ -711,6 +754,11 @@ namespace Confluent.Kafka.Impl
             internal static extern ErrorCode rd_kafka_get_watermark_offsets(IntPtr rk,
                     [MarshalAs(UnmanagedType.LPStr)] string topic,
                     int partition, out long low, out long high);
+
+            [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+            internal static extern ErrorCode rd_kafka_offsets_for_times(IntPtr rk,
+                /* rd_kafka_topic_partition_list_t * */ IntPtr offsets,
+                IntPtr timeout_ms);
 
             [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
             internal static extern void rd_kafka_mem_free(IntPtr rk, IntPtr ptr);
@@ -756,6 +804,14 @@ namespace Confluent.Kafka.Impl
                     /* void * */ IntPtr opaque);
 
             [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+            internal static extern ErrorCode rd_kafka_pause_partitions(
+                    IntPtr rk, IntPtr partitions);
+
+            [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+            internal static extern ErrorCode rd_kafka_resume_partitions(
+                    IntPtr rk, IntPtr partitions);
+
+            [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
             internal static extern ErrorCode rd_kafka_committed(
                     IntPtr rk, IntPtr partitions, IntPtr timeout_ms);
 
@@ -763,24 +819,21 @@ namespace Confluent.Kafka.Impl
             internal static extern ErrorCode rd_kafka_position(
                     IntPtr rk, IntPtr partitions);
 
+            // note: producev signature is rd_kafka_producev(rk, ...)
+            // we are keeping things simple with one binding for now, but it 
+            // will be worth benchmarking the overload with no timestamp, opaque,
+            // partition, etc
             [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-            internal static extern IntPtr rd_kafka_produce(
-                    IntPtr rkt,
-                    int partition,
-                    IntPtr msgflags,
-                    IntPtr val, UIntPtr len,
-                    IntPtr key, UIntPtr keylen,
-                    IntPtr msg_opaque);
-
-            [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-            internal static extern IntPtr rd_kafka_producev(
-                IntPtr rkt,
-                int partition,
-                IntPtr msgflags,
-                IntPtr val, UIntPtr len,
-                IntPtr key, UIntPtr keylen,
-                long timestamp,
-                IntPtr msg_opaque);
+            internal static extern ErrorCode rd_kafka_producev(
+                IntPtr rk,
+                ProduceVarTag topicType, [MarshalAs(UnmanagedType.LPStr)] string topic,
+                ProduceVarTag partitionType, int partition,
+                ProduceVarTag vaType, IntPtr val, UIntPtr len,
+                ProduceVarTag keyType, IntPtr key, UIntPtr keylen,
+                ProduceVarTag msgflagsType, IntPtr msgflags,
+                ProduceVarTag msg_opaqueType, IntPtr msg_opaque,
+                ProduceVarTag timestampType, long timestamp,
+                ProduceVarTag endType);
 
             [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
             internal static extern ErrorCode rd_kafka_flush(

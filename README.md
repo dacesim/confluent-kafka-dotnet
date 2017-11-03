@@ -1,6 +1,10 @@
 Confluent's .NET Client for Apache Kafka<sup>TM</sup>
 =====================================================
 
+[![Travis Build Status](https://travis-ci.org/confluentinc/confluent-kafka-dotnet.svg?branch=master)](https://travis-ci.org/confluentinc/confluent-kafka-dotnet)
+[![Build status](https://ci.appveyor.com/api/projects/status/kux83eykufuv16cn/branch/master?svg=true)](https://ci.appveyor.com/project/ConfluentClientEngineering/confluent-kafka-dotnet/branch/master)
+[![Chat on Slack](https://img.shields.io/badge/chat-on%20slack-7A5979.svg)](https://confluentcommunity.slack.com/messages/clients)
+
 **confluent-kafka-dotnet** is Confluent's .NET client for [Apache Kafka](http://kafka.apache.org/) and the
 [Confluent Platform](https://www.confluent.io/product/).
 
@@ -47,6 +51,14 @@ To reference in a dotnet core project, explicitly add a package reference to you
   ...
 </ItemGroup>
 ```
+
+Pre-release nuget packages are available from the following nuget package source:
+[https://ci.appveyor.com/nuget/confluent-kafka-dotnet](https://ci.appveyor.com/nuget/confluent-kafka-dotnet). 
+
+The version suffix of these nuget packages matches the appveyor build number. You can see which commit a 
+particular build number corresponds to by looking at the 
+[AppVeyor build history](https://ci.appveyor.com/project/ConfluentClientEngineering/confluent-kafka-dotnet/history)
+
 
 ## Examples
 
