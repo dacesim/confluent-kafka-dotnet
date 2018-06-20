@@ -24,13 +24,11 @@ namespace Confluent.Kafka.UnitTests.Serialization
 {
     public class FloatTests
     {
-        [Fact]
-        public void CanReconstructFloat()
+        [Theory]
+        [MemberData(nameof(TestData))]
+        public void CanReconstruct(float value)
         {
-            foreach (var value in TestData)
-            {
-                Assert.Equal(value, new FloatDeserializer().Deserialize(null, new FloatSerializer().Serialize(null, value)));
-            }
+            Assert.Equal(value, new FloatDeserializer().Deserialize(null, new FloatSerializer().Serialize(null, value)));
         }
 
         [Fact]
@@ -57,23 +55,23 @@ namespace Confluent.Kafka.UnitTests.Serialization
             Assert.ThrowsAny<ArgumentException>(() => new FloatDeserializer().Deserialize(null, new byte[5]));
         }
 
-        public static float[] TestData
+        public static IEnumerable<object[]> TestData()
         {
-            get
+            float[] testData = new float[]
             {
-                float[] testData = new float[]
-                {
-                    0, 1, -1, 42, -42, 127, 128, 129, -127, -128,
-                    -129,254, 255, 256, 257, -254, -255, -256, -257,
-                    short.MinValue-1, short.MinValue, short.MinValue+1,
-                    short.MaxValue-1, short.MaxValue,short.MaxValue+1,
-                    int.MaxValue-1, int.MaxValue, int.MinValue, int.MinValue + 1,
-                    float.MaxValue-1,float.MaxValue,float.MinValue,float.MinValue+1,
-                    float.NaN,float.PositiveInfinity,float.NegativeInfinity,float.Epsilon,-float.Epsilon,
-                    0.1f, -0.1f
-                };
+                0, 1, -1, 42, -42, 127, 128, 129, -127, -128,
+                -129,254, 255, 256, 257, -254, -255, -256, -257,
+                short.MinValue-1, short.MinValue, short.MinValue+1,
+                short.MaxValue-1, short.MaxValue,short.MaxValue+1,
+                int.MaxValue-1, int.MaxValue, int.MinValue, int.MinValue + 1,
+                float.MaxValue-1,float.MaxValue,float.MinValue,float.MinValue+1,
+                float.NaN,float.PositiveInfinity,float.NegativeInfinity,float.Epsilon,-float.Epsilon,
+                0.1f, -0.1f
+            };
 
-                return testData;
+            foreach (var v in testData)
+            {
+                yield return new object[] { v };
             }
         }
     }

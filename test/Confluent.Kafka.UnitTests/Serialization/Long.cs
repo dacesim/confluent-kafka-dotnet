@@ -25,7 +25,7 @@ namespace Confluent.Kafka.UnitTests.Serialization
     {
         [Theory]
         [MemberData(nameof(TestData))]
-        public void CanReconstructLong(long value)
+        public void CanReconstruct(long value)
         {
             Assert.Equal(value, new LongDeserializer().Deserialize("topic", new LongSerializer().Serialize("topic", value)));
         }

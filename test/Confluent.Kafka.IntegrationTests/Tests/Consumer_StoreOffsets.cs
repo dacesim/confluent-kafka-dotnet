@@ -14,8 +14,6 @@
 //
 // Refer to LICENSE for more information.
 
-#pragma warning disable xUnit1026
-
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -48,7 +46,7 @@ namespace Confluent.Kafka.IntegrationTests
             using (var consumer = new Consumer<Null, string>(consumerConfig, null, new StringDeserializer(Encoding.UTF8)))
             {
                 IEnumerable<TopicPartition> assignedPartitions = null;
-                ConsumerRecord<Null, string> record;
+                Message<Null, string> message;
 
                 consumer.OnPartitionsAssigned += (_, partitions) =>
                 {
@@ -63,16 +61,16 @@ namespace Confluent.Kafka.IntegrationTests
                     consumer.Poll(TimeSpan.FromSeconds(1));
                 }
 
-                Assert.False(consumer.Consume(out record, TimeSpan.FromSeconds(1)));
+                Assert.False(consumer.Consume(out message, TimeSpan.FromSeconds(1)));
 
-                Assert.False(producer.ProduceAsync(topic, new Message<Null, string> { Value = "test store offset value" }).Result.Error.IsError);
-                Assert.True(consumer.Consume(out record, TimeSpan.FromSeconds(30)));
-                var result = consumer.StoreOffset(record);
+                Assert.False(producer.ProduceAsync(topic, null, "test store offset value").Result.Error);
+                Assert.True(consumer.Consume(out message, TimeSpan.FromSeconds(30)));
+                var result = consumer.StoreOffset(message);
 
                 Assert.Equal(ErrorCode.NoError, result.Error.Code);
-                Assert.Equal(record.Topic, result.Topic);
-                Assert.Equal(record.Partition, result.Partition);
-                Assert.Equal(record.Offset.Value+1, result.Offset.Value);
+                Assert.Equal(message.Topic, result.Topic);
+                Assert.Equal(message.Partition, result.Partition);
+                Assert.Equal(message.Offset.Value+1, result.Offset.Value);
             }
         }
 

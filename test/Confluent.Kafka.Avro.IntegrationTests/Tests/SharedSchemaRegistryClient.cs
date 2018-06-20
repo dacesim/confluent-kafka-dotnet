@@ -65,7 +65,7 @@ namespace Confluent.Kafka.Avro.IntegrationTests
                             favorite_number = i,
                             favorite_color = "blue"
                         };
-                        producer.ProduceAsync(topic, new Message<string, User> { Key = user.name, Value = user });
+                        producer.ProduceAsync(topic, user.name, user);
                     }
                     Assert.Equal(0, producer.Flush(TimeSpan.FromSeconds(10)));
                 }
@@ -74,24 +74,24 @@ namespace Confluent.Kafka.Avro.IntegrationTests
                 {
                     bool done = false;
                     int i = 0;
-                    consumer.OnRecord += (o, record) =>
+                    consumer.OnMessage += (o, e) =>
                     {
-                        Assert.Equal(i.ToString(), record.Message.Key);
-                        Assert.Equal(i.ToString(), record.Message.Value.name);
-                        Assert.Equal(i, record.Message.Value.favorite_number);
-                        Assert.Equal("blue", record.Message.Value.favorite_color);
+                        Assert.Equal(i.ToString(), e.Key);
+                        Assert.Equal(i.ToString(), e.Value.name);
+                        Assert.Equal(i, e.Value.favorite_number);
+                        Assert.Equal("blue", e.Value.favorite_color);
 
                         i++;
                     };
 
-                    consumer.OnError += (o, error) =>
+                    consumer.OnError += (o, e) =>
                     {
-                        Assert.True(false, error.Reason);
+                        Assert.True(false, e.Reason);
                     };
 
-                    consumer.OnConsumeError += (o, record) =>
+                    consumer.OnConsumeError += (o, e) =>
                     {
-                        Assert.True(false, record.Error.Reason);
+                        Assert.True(false, e.Error.Reason);
                     };
 
                     consumer.OnPartitionEOF += (o, e)

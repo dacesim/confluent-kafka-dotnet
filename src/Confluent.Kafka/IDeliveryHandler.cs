@@ -16,8 +16,6 @@
 //
 // Refer to LICENSE for more information.
 
-using System;
-
 
 namespace Confluent.Kafka
 {
@@ -29,32 +27,25 @@ namespace Confluent.Kafka
     ///     Methods of this interface will be executed on the poll thread and will
     ///     block other operations - consider this when implementing.
     /// </remarks>
-    internal interface IDeliveryHandler
+    public interface IDeliveryHandler
     {
         /// <summary>
         ///     Gets whether or not to marshal key and value data 
         ///     from librdkafka when the delivery report is 
         ///     available. Usually this should return true.
-        ///     Return false for a small improvement in throughput
+        ///     Return false for a small performance improvement
         ///     if you don't need this information.
         /// </summary>
         bool MarshalData { get; }
 
         /// <summary>
-        ///     Gets whether or not to marshal message headers.
-        ///     Set this to false for a increased throughput if
-        ///     you don't need this information.
-        /// </summary>
-        bool MarshalHeaders { get; }
-        
-        /// <summary>
         ///     This method is called when the delivery report
         ///     is available
         /// </summary>
-        /// <param name="deliveryReport">
+        /// <param name="message">
         ///     The delivery report.
         /// </param>
-        void HandleDeliveryReport(DeliveryReport deliveryReport);
+        void HandleDeliveryReport(Message message);
     }
 
     /// <summary>
@@ -65,32 +56,25 @@ namespace Confluent.Kafka
     ///     Methods of this interface will be executed on the poll thread and will
     ///     block other operations - consider this when implementing.
     /// </remarks>
-    internal interface IDeliveryHandler<TKey, TValue>
+    public interface IDeliveryHandler<TKey, TValue>
     {
         /// <summary>
         ///     Gets whether or not to marshal key and value data 
         ///     from librdkafka when the delivery report is 
         ///     available. Usually this should return true.
-        ///     Return false for a small improvement in throughput
+        ///     Return false for a small performance improvement
         ///     if you don't need this information.
         /// </summary>
         bool MarshalData { get; }
 
         /// <summary>
-        ///     Gets whether or not to marshal message headers.
-        ///     Set this to false for a increased throughput if
-        ///     you don't need this information.
-        /// </summary>
-        bool MarshalHeaders { get; }
-
-        /// <summary>
         ///     This method is called when the delivery report
         ///     is available
         /// </summary>
-        /// <param name="deliveryReport">
+        /// <param name="message">
         ///     The delivery report.
         /// </param>
-        void HandleDeliveryReport(DeliveryReport<TKey, TValue> deliveryReport);
+        void HandleDeliveryReport(Message<TKey, TValue> message);
     }
 
 }

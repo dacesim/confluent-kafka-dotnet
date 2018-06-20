@@ -48,7 +48,7 @@ namespace Confluent.Kafka
         /// <param name="error">
         ///     A Kafka error.
         /// </param>
-        public TopicPartitionError(string topic, Partition partition, Error error)
+        public TopicPartitionError(string topic, int partition, Error error)
         {
             Topic = topic;
             Partition = partition;
@@ -63,7 +63,7 @@ namespace Confluent.Kafka
         /// <summary>
         ///     Gets the Kafka partition.
         /// </summary>
-        public Partition Partition { get; }
+        public int Partition { get; }
 
         /// <summary>
         ///     Gets the Kafka error.
