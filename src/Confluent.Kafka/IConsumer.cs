@@ -17,7 +17,6 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka.Impl;
 using Confluent.Kafka.Internal;
@@ -49,9 +48,11 @@ namespace Confluent.Kafka
         /// <include file='include_docs_consumer.xml' path='API/Member[@name="Consume_ConsumerRecord_TimeSpan"]/*' />
         bool Consume(out ConsumerRecord<TKey, TValue> record, TimeSpan timeout);
 
-        bool Consume(out ConsumerRecord<TKey, TValue> record, CancellationToken cancellationToken);
+        /// <include file='include_docs_consumer.xml' path='API/Member[@name="Poll_int"]/*' />
+        void Poll(int millisecondsTimeout);
 
-        Task<ConsumerRecord<TKey, TValue>> ConsumeAsync(CancellationToken cancellationToken);
+        /// <include file='include_docs_consumer.xml' path='API/Member[@name="Poll_TimeSpan"]/*' />
+        void Poll(TimeSpan timeout);
 
         /// <include file='include_docs_consumer.xml' path='API/Member[@name="OnPartitionsAssigned"]/*' />
         event EventHandler<List<TopicPartition>> OnPartitionsAssigned;
@@ -101,17 +102,11 @@ namespace Confluent.Kafka
         /// <include file='include_docs_consumer.xml' path='API/Member[@name="Commit"]/*' />
         CommittedOffsets Commit();
 
-        Task<CommittedOffsets> CommitAsync();
-
         /// <include file='include_docs_consumer.xml' path='API/Member[@name="Commit_ConsumerRecord"]/*' />
         CommittedOffsets Commit(ConsumerRecord<TKey, TValue> record);
 
-        Task<CommittedOffsets> CommitAsync(ConsumerRecord<TKey, TValue> record);
-
         /// <include file='include_docs_consumer.xml' path='API/Member[@name="Commit_IEnumerable"]/*' />
         CommittedOffsets Commit(IEnumerable<TopicPartitionOffset> offsets);
-
-        Task<CommittedOffsets> CommitAsync(IEnumerable<TopicPartitionOffset> offsets);
 
         /// <include file='include_docs_consumer.xml' path='API/Member[@name="Seek"]/*' />
         void Seek(TopicPartitionOffset tpo);

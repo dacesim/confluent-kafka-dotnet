@@ -103,7 +103,7 @@ namespace Confluent.Kafka
         ///     Creates a new Producer instance
         /// </summary>
         /// <param name="handle">
-        ///     A librdkafka handle to use for Kafka cluster communication.
+        ///     A librdkafka handle to use for Kafka cluster communications.
         /// </param>
         /// <param name="keySerializer">
         ///     An ISerializer implementation instance that will be used to serialize keys.
@@ -145,93 +145,20 @@ namespace Confluent.Kafka
             remove { this.handle.Owner.OnStatistics -= value; }
         }
 
-        /// <summary>
-        ///     Raised on critical errors, e.g. connection failures or all 
-        ///     brokers down. Note that the client will try to automatically 
-        ///     recover from errors - these errors should be seen as 
-        ///     informational rather than catastrophic
-        /// </summary>
-        /// <remarks>
-        ///     Called on the Producer poll thread.
-        /// </remarks>
+        /// <include file='include_docs_producer.xml' path='API/Member[@name="OnError"]/*' />
         public event EventHandler<Error> OnError
         {
             add { this.handle.Owner.OnError += value; }
             remove { this.handle.Owner.OnError -= value; }
         }
 
-        /// <summary>
-        ///     Wait until all outstanding produce requests and delievery report
-        ///     callbacks are completed.
-        ///    
-        ///     [API-SUBJECT-TO-CHANGE] - the semantics and/or type of the return value is
-        ///     subject to change.
-        /// </summary>
-        /// <param name="millisecondsTimeout">
-        ///     The maximum time to block in milliseconds or -1 to block
-        ///     indefinitely. You should typically use a relatively short timout 
-        ///     period because this operation cannot be cancelled.
-        /// </param>
-        /// <returns>
-        ///     The current librdkafka out queue length. This should be interpreted
-        ///     as a rough indication of the number of messages waiting to be sent
-        ///     to or acknowledged by the broker. If zero, there are no outstanding
-        ///     messages or callbacks. Specifically, the value is equal to the sum
-        ///     of the number of produced messages for which a delivery report has
-        ///     not yet been handled and a number which is less than or equal to the
-        ///     number of pending delivery report callback events (as determined by
-        ///     an internal librdkafka implementation detail).
-        /// </returns>
-        /// <remarks>
-        ///     This method should typically be called prior to destroying a producer
-        ///     instance to make sure all queued and in-flight produce requests are
-        ///     completed before terminating. The wait time is bounded by the
-        ///     millisecondsTimeout parameter.
-        ///    
-        ///     A related configuration parameter is message.timeout.ms which determines
-        ///     the maximum length of time librdkafka attempts to deliver a message 
-        ///     before giving up and so also affects the maximum time a call to Flush 
-        ///     may block.
-        /// </remarks>
+        /// <include file='include_docs_producer.xml' path='API/Member[@name="Flush_int"]/*' />
         public int Flush(int millisecondsTimeout)
             => ((Producer)this.handle.Owner).Flush(millisecondsTimeout);
 
-        /// <summary>
-        ///     Wait until all outstanding produce requests and delievery report
-        ///     callbacks are completed. Refer to <see cref="Flush(int)" /> for
-        ///     more information.
-        ///
-        ///     [API-SUBJECT-TO-CHANGE] - the semantics and/or type of the return value is
-        ///     subject to change.
-        /// </summary>
-        /// <param name="timeout">
-        ///     The maximum length of time to block. You should typically use a
-        ///     relatively short timout period because this operation cannot be 
-        ///     cancelled.
-        /// </param>
-        /// <returns>
-        ///     The current librdkafka out queue length. Refer to <see cref="Flush(int)" />
-        ///     for more information.
-        /// </returns>
+        /// <include file='include_docs_producer.xml' path='API/Member[@name="Flush_TimeSpan"]/*' />
         public int Flush(TimeSpan timeout)
             => ((Producer)this.handle.Owner).Flush(timeout.TotalMillisecondsAsInt());
-
-        public int Flush(CancellationToken cancellationToken)
-        {
-            while (true)
-            {
-                int result = Flush(100);
-                if (result == 0)
-                {
-                    return 0;
-                }
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    // TODO: include flush number in exception.
-                    throw new OperationCanceledException();
-                }
-            }
-        }
 
         /// <include file='include_docs_producer.xml' path='API/Member[@name="Poll_int"]/*' />
         public int Poll(int millisecondsTimeout)
@@ -241,13 +168,7 @@ namespace Confluent.Kafka
         public int Poll(TimeSpan timeout)
             => ((Producer)this.handle.Owner).Poll(timeout.TotalMillisecondsAsInt());
 
-        /// <summary>
-        ///     Releases all resources used by this Producer.
-        /// </summary>
-        /// <remarks>
-        ///     You will often want to call <see cref="Flush(int)" />
-        ///     before disposing a Producer instance.
-        /// </remarks>
+        /// <include file='include_docs_producer.xml' path='API/Member[@name="Dispose"]/*' />
         public void Dispose()
         {
             if (keySerializer != null)
@@ -300,9 +221,9 @@ namespace Confluent.Kafka
                 if (deliveryReport == null)
                 {
 #if NET45
-                    System.Threading.Tasks.Task.Run(() => TrySetResult(null));
+                    System.Threading.Tasks.Task.Run(() => SetResult(null));
 #else
-                    TrySetResult(null);
+                    SetResult(null);
 #endif
                     return;
                 }
@@ -329,16 +250,16 @@ namespace Confluent.Kafka
                 }
                 else
                 {
-                    System.Threading.Tasks.Task.Run(() => TrySetResult(dr));
+                    System.Threading.Tasks.Task.Run(() => SetResult(dr));
                 }
 #else
                 if (dr.Error.IsError)
                 {
-                    TrySetException(new ProduceMessageException<TKey, TValue>(dr.Error, dr));
+                    SetException(new ProduceMessageException<TKey, TValue>(dr.Error, dr));
                 }
                 else
                 {
-                    TrySetResult(dr);
+                    SetResult(dr);
                 }
 #endif
             }
@@ -397,13 +318,11 @@ namespace Confluent.Kafka
 
         /// <include file='include_docs_producer.xml' path='API/Member[@name="ProduceAsync_string_Message"]/*' />
         /// <include file='include_docs_producer.xml' path='API/Member[@name="ProduceAsync_Common"]/*' />
-        public Task<DeliveryReport<TKey, TValue>> ProduceAsync(string topic, Message<TKey, TValue> message, CancellationToken cancellationToken = default(CancellationToken))
+        public Task<DeliveryReport<TKey, TValue>> ProduceAsync(string topic, Message<TKey, TValue> message)
         {
             var handler = new TypedTaskDeliveryHandlerShim(topic,
                 producer.enableDeliveryReportKey ? message.Key : default(TKey),
                 producer.enableDeliveryReportValue ? message.Value : default(TValue));
-
-            cancellationToken.Register(() => handler.TrySetException(new TaskCanceledException()));
 
             var keyBytes = keySerializer?.Serialize(topic, message.Key);
             var valBytes = valueSerializer?.Serialize(topic, message.Value);
@@ -420,13 +339,11 @@ namespace Confluent.Kafka
 
         /// <include file='include_docs_producer.xml' path='API/Member[@name="ProduceAsync_TopicPartition_Message"]/*' />
         /// <include file='include_docs_producer.xml' path='API/Member[@name="ProduceAsync_Common"]/*' />
-        public Task<DeliveryReport<TKey, TValue>> ProduceAsync(TopicPartition topicPartition, Message<TKey, TValue> message, CancellationToken cancellationToken = default(CancellationToken))
+        public Task<DeliveryReport<TKey, TValue>> ProduceAsync(TopicPartition topicPartition, Message<TKey, TValue> message)
         {
             var handler = new TypedTaskDeliveryHandlerShim(topicPartition.Topic,
                 producer.enableDeliveryReportKey ? message.Key : default(TKey),
                 producer.enableDeliveryReportValue ? message.Value : default(TValue));
-
-            cancellationToken.Register(() => handler.TrySetException(new TaskCanceledException()));
 
             var keyBytes = keySerializer?.Serialize(topicPartition.Topic, message.Key);
             var valBytes = valueSerializer?.Serialize(topicPartition.Topic, message.Value);
@@ -888,6 +805,7 @@ namespace Confluent.Kafka
         public int Poll(TimeSpan timeout)
             => Poll(timeout.TotalMillisecondsAsInt());
 
+        /// <include file='include_docs_producer.xml' path='API/Member[@name="OnError"]/*' />
         public event EventHandler<Error> OnError;
 
         /// <include file='include_docs_client.xml' path='API/Member[@name="OnStatistics"]/*' />
@@ -900,9 +818,11 @@ namespace Confluent.Kafka
         public string Name
             => kafkaHandle.Name;
 
+        /// <include file='include_docs_producer.xml' path='API/Member[@name="Flush_int"]/*' />
         public int Flush(int millisecondsTimeout)
             => kafkaHandle.Flush(millisecondsTimeout);
 
+        /// <include file='include_docs_producer.xml' path='API/Member[@name="Flush_TimeSpan"]/*' />
         public int Flush(TimeSpan timeout)
             => kafkaHandle.Flush(timeout.TotalMillisecondsAsInt());
 

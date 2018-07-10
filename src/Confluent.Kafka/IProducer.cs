@@ -36,17 +36,11 @@ namespace Confluent.Kafka
     {
         /// <include file='include_docs_producer.xml' path='API/Member[@name="ProduceAsync_string_Message"]/*' />
         /// <include file='include_docs_producer.xml' path='API/Member[@name="ProduceAsync_Common"]/*' />
-        Task<DeliveryReport<TKey, TValue>> ProduceAsync(
-            string topic,
-            Message<TKey, TValue> message,
-            CancellationToken cancellationToken = default(CancellationToken));
+        Task<DeliveryReport<TKey, TValue>> ProduceAsync(string topic, Message<TKey, TValue> message);
 
         /// <include file='include_docs_producer.xml' path='API/Member[@name="ProduceAsync_TopicPartition_Message"]/*' />
         /// <include file='include_docs_producer.xml' path='API/Member[@name="ProduceAsync_Common"]/*' />
-        Task<DeliveryReport<TKey, TValue>> ProduceAsync(
-            TopicPartition topicPartition,
-            Message<TKey, TValue> message,
-            CancellationToken cancellationToken = default(CancellationToken));
+        Task<DeliveryReport<TKey, TValue>> ProduceAsync(TopicPartition topicPartition, Message<TKey, TValue> message);
 
         /// <include file='include_docs_producer.xml' path='API/Member[@name="ProduceAsync_string_Message"]/*' />
         /// <include file='include_docs_producer.xml' path='API/Member[@name="Produce_Action"]/*' />
@@ -61,7 +55,5 @@ namespace Confluent.Kafka
 
         /// <include file='include_docs_producer.xml' path='API/Member[@name="Flush_TimeSpan"]/*' />
         int Flush(TimeSpan timeout);
-
-        int Flush(CancellationToken cancellationToken = default(CancellationToken));
     }
 }
