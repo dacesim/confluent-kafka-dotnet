@@ -34,15 +34,12 @@ namespace Confluent.Kafka.Serialization
         /// <param name="data">
         ///     A byte array containing the serialized System.Double value (big endian encoding).
         /// </param>
-        /// <param name="isNull">
-        ///     True if the data is null, false otherwise.
-        /// </param>
         /// <returns>
         ///     The deserialized System.Double value.
         /// </returns>
-        public double Deserialize(string topic, ReadOnlySpan<byte> data, bool isNull)
+        public double Deserialize(string topic, byte[] data)
         {
-            if (isNull)
+            if (data == null)
             {
                 throw new ArgumentNullException($"Arg {nameof(data)} is null");
             }
@@ -72,11 +69,7 @@ namespace Confluent.Kafka.Serialization
             }
             else
             {
-#if NETCOREAPP2_1
-                return BitConverter.ToDouble(data);
-#else
-                return BitConverter.ToDouble(data.ToArray(), 0);
-#endif
+                return BitConverter.ToDouble(data, 0);
             }
         }
 

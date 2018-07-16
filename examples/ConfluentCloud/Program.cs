@@ -62,7 +62,7 @@ namespace ConfluentCloudExample
 
             using (var producer = new Producer<Null, string>(pConfig, null, new StringSerializer(Encoding.UTF8)))
             {
-                producer.ProduceAsync("dotnet-test-topic", new Message<Null, string> { Key = null, Value = "test value" })
+                producer.ProduceAsync("dotnet-test-topic", null, "test value")
                     .ContinueWith(result => 
                         {
                             var msg = result.Result;
@@ -98,22 +98,18 @@ namespace ConfluentCloudExample
             { 
                 consumer.Subscribe("dotnet-test-topic");
 
+                consumer.OnConsumeError += (_, err)
+                    => Console.WriteLine($"consume error: {err.Error.Reason}");
+
+                consumer.OnMessage += (_, msg)
+                    => Console.WriteLine($"consumed: {msg.Value}");
+
                 consumer.OnPartitionEOF += (_, tpo)
                     => Console.WriteLine($"end of partition: {tpo}");
 
                 while (true)
                 {
-                    try
-                    {
-                        if (consumer.Consume(out var record, TimeSpan.FromMilliseconds(100)))
-                        {
-                            Console.WriteLine($"consumed: {record.Value}");
-                        }
-                    }
-                    catch (ConsumeException e)
-                    {
-                        Console.WriteLine($"consume error: {e.Error.Reason}");
-                    }
+                    consumer.Poll(TimeSpan.FromMilliseconds(100));
                 }  
             }
         }
