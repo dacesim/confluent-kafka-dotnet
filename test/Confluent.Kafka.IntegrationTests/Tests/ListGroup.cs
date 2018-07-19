@@ -14,8 +14,6 @@
 //
 // Refer to LICENSE for more information.
 
-#pragma warning disable xUnit1026
-
 using System;
 using System.Linq;
 using System.Text;
@@ -47,16 +45,15 @@ namespace Confluent.Kafka.IntegrationTests
             };
 
             using (var consumer = new Consumer<Null, string>(consumerConfig, null, new StringDeserializer(Encoding.UTF8)))
-            using (var adminClient = new AdminClient(consumer.Handle))
             {
                 bool done = false;
 
-                consumer.OnRecord += (_, record)
+                consumer.OnMessage += (_, msg)
                     => done = true;
 
                 consumer.OnPartitionsAssigned += (_, partitions) =>
                 {
-                    Assert.Single(partitions);
+                    Assert.Equal(partitions.Count, 1);
                     Assert.Equal(partitions[0], firstProduced.TopicPartition);
                     consumer.Assign(partitions.Select(p => new TopicPartitionOffset(p, firstProduced.Offset)));
                 };
@@ -68,14 +65,14 @@ namespace Confluent.Kafka.IntegrationTests
                     consumer.Poll(TimeSpan.FromMilliseconds(100));
                 }
 
-                var g = adminClient.ListGroup(groupId);
+                var g = consumer.ListGroup(groupId);
                 Assert.NotNull(g);
                 Assert.Equal(ErrorCode.NoError, g.Error.Code);
                 Assert.Equal(groupId, g.Group);
                 Assert.Equal("consumer", g.ProtocolType);
-                Assert.Single(g.Members);
+                Assert.Equal(1, g.Members.Count);
 
-                g = adminClient.ListGroup("non-existent-cg");
+                g = consumer.ListGroup("non-existent-cg");
                 Assert.Null(g);
             }
         }

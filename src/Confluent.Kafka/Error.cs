@@ -65,7 +65,7 @@ namespace Confluent.Kafka
         /// </summary>
         public ErrorCode Code { get; }
 
-        private readonly string reason;
+        private string reason;
 
         /// <summary>
         ///     Gets a human readable reason string associated with this error.
@@ -78,7 +78,7 @@ namespace Confluent.Kafka
         /// <summary>
         ///     true if Code != ErrorCode.NoError.
         /// </summary>
-        public bool IsError
+        public bool HasError
             => Code != ErrorCode.NoError;
 
         /// <summary>
@@ -92,6 +92,15 @@ namespace Confluent.Kafka
         /// </summary>
         public bool IsBrokerError
             => (int)Code > 0;
+
+        /// <summary>
+        ///     Converts the specified Error value to a boolean value (false if e.Code == ErrorCode.NoError, true otherwise).
+        /// </summary>
+        /// <param name="e">
+        ///     The Error value to convert.
+        /// </param>
+        public static implicit operator bool(Error e)
+            => e.HasError;
 
         /// <summary>
         ///     Converts the specified Error value to the value of it's Code property.
@@ -153,9 +162,9 @@ namespace Confluent.Kafka
         /// </returns>
         public static bool operator ==(Error a, Error b)
         {
-            if (a is null)
+            if (object.ReferenceEquals(a, null))
             {
-                return b is null;
+                return object.ReferenceEquals(b, null);
             }
 
             return a.Equals(b);

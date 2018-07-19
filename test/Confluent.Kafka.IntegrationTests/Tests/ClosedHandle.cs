@@ -14,12 +14,9 @@
 //
 // Refer to LICENSE for more information.
 
-#pragma warning disable xUnit1026
-
 using System;
 using System.Collections.Generic;
 using Xunit;
-using Confluent.Kafka.Serialization;
 
 
 namespace Confluent.Kafka.IntegrationTests
@@ -36,9 +33,8 @@ namespace Confluent.Kafka.IntegrationTests
             var producerConfig = new Dictionary<string, object>
             {
                 { "bootstrap.servers", bootstrapServers },
-                { "dotnet.producer.enable.background.poll", false }
             };
-            var producer = new Producer<byte[], byte[]>(producerConfig, new ByteArraySerializer(), new ByteArraySerializer());
+            var producer = new Producer(producerConfig, true, false);
             producer.Poll(TimeSpan.FromMilliseconds(10));
             producer.Dispose();
             Assert.Throws<ObjectDisposedException>(() => producer.Poll(TimeSpan.FromMilliseconds(10)));
@@ -56,7 +52,7 @@ namespace Confluent.Kafka.IntegrationTests
                 { "group.id", Guid.NewGuid().ToString() },
                 { "bootstrap.servers", bootstrapServers }
             };
-            var consumer = new Consumer<byte[], byte[]>(consumerConfig, new ByteArrayDeserializer(), new ByteArrayDeserializer());
+            var consumer = new Consumer(consumerConfig);
             consumer.Poll(TimeSpan.FromMilliseconds(10));
             consumer.Dispose();
             Assert.Throws<ObjectDisposedException>(() => consumer.Poll(TimeSpan.FromMilliseconds(10)));

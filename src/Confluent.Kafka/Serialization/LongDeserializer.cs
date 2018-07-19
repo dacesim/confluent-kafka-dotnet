@@ -34,15 +34,12 @@ namespace Confluent.Kafka.Serialization
         /// <param name="topic">
         ///     The topic associated with the data (ignored by this deserializer).
         /// </param>
-        /// <param name="isNull">
-        ///     True if the data is null, false otherwise.
-        /// </param>
         /// <returns>
         ///     The deserialized <see cref="System.Int64"/> value.
         /// </returns>
-        public long Deserialize(string topic, ReadOnlySpan<byte> data, bool isNull)
+        public long Deserialize(string topic, byte[] data)
         {
-            if (isNull)
+            if (data == null)
             {
                 throw new ArgumentException($"Arg [{nameof(data)}] is null");
             }
