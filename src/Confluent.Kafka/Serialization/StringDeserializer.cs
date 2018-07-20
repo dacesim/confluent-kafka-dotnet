@@ -30,17 +30,6 @@ namespace Confluent.Kafka.Serialization
         Encoding encoding;
 
         /// <summary>
-        ///     Name of the configuration parameter used to specify the encoding when deserializing keys.
-        /// </summary>
-        public const string KeyEncodingConfigParam = "dotnet.string.deserializer.encoding.key";
-
-        /// <summary>
-        ///     Name of the configuration parameter used to specify the encoding when deserializing values.
-        /// </summary>
-        public const string ValueEncodingConfigParam = "dotnet.string.deserializer.encoding.value";
-
-
-        /// <summary>
         ///     Initializes a new StringDeserializer class instance.
         /// </summary>
         /// <param name="encoding">
@@ -53,7 +42,7 @@ namespace Confluent.Kafka.Serialization
 
         /// <summary>
         ///     Initializes a new StringDeserializer class instance.
-        ///     The encoding to use must be provided via a <see cref="Consumer" /> 
+        ///     The encoding to use must be provided via a <see cref="Confluent.Kafka.Consumer{TKey, TValue}" /> 
         ///     configuration property. When used to deserialize keys, the 
         ///     relevant property is 'dotnet.string.deserializer.encoding.key'.
         ///     When used to deserialize values, the relevant property is
@@ -73,22 +62,30 @@ namespace Confluent.Kafka.Serialization
         /// <param name="topic">
         ///     The topic associated with the data (ignored by this deserializer).
         /// </param>
+        /// <param name="isNull">
+        ///     True if the data is null, false otherwise.
+        /// </param>
         /// <returns>
         ///     <paramref name="data" /> deserialized to a string (or null if data is null).
         /// </returns>
-        public string Deserialize(string topic, byte[] data)
+        public string Deserialize(string topic, ReadOnlySpan<byte> data, bool isNull)
         {
-            if (data == null)
+            if (isNull)
             {
                 return null;
             }
+
+#if NETCOREAPP2_1
             return encoding.GetString(data);
+#else
+            return encoding.GetString(data.ToArray());
+#endif
         }
 
         /// <include file='../include_docs.xml' path='API/Member[@name="IDeserializer_Configure"]/*' />
         public IEnumerable<KeyValuePair<string, object>> Configure(IEnumerable<KeyValuePair<string, object>> config, bool isKey)
         {
-            var propertyName = isKey ? KeyEncodingConfigParam : ValueEncodingConfigParam;
+            var propertyName = isKey ? ConfigPropertyNames.DeserializerKeyEncodingConfigParam : ConfigPropertyNames.DeserializerValueEncodingConfigParam;
             var keyOrValue = isKey ? "Key" : "Value";
 
             if (config.Any(ci => ci.Key == propertyName))
