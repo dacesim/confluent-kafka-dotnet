@@ -14,8 +14,6 @@
 //
 // Refer to LICENSE for more information.
 
-#pragma warning disable xUnit1026
-
 using System;
 using System.Text;
 using System.Collections.Generic;
@@ -47,20 +45,18 @@ namespace Confluent.Kafka.IntegrationTests
             // Producing onto the topic to make sure it exists.
             using (var producer = new Producer<Null, string>(producerConfig, null, new StringSerializer(Encoding.UTF8)))
             {
-                var dr = producer.ProduceAsync(singlePartitionTopic, new Message<Null, string> { Value = "test string" }).Result;
-                Assert.NotEqual(Offset.Invalid, dr.Offset);
+                var dr = producer.ProduceAsync(singlePartitionTopic, null, "test string").Result;
+                Assert.NotEqual((long)dr.Offset, (long)Offset.Invalid); // TODO: remove long cast. this is fixed in PR #29
                 producer.Flush(TimeSpan.FromSeconds(10));
             }
 
             using (var consumer = new Consumer<Null, string>(consumerConfig, null, new StringDeserializer(Encoding.UTF8)))
             {
                 consumer.Subscribe(singlePartitionTopic);
-                Assert.Empty(consumer.Assignment);
-                consumer.Consume(TimeSpan.FromSeconds(10));
-                Assert.Single(consumer.Assignment);
-                Assert.Equal(singlePartitionTopic, consumer.Assignment[0].Topic);
-
-                consumer.Close();
+                Assert.Equal(consumer.Assignment.Count, 0);
+                consumer.Poll(TimeSpan.FromSeconds(10));
+                Assert.Equal(consumer.Assignment.Count, 1);
+                Assert.Equal(consumer.Assignment[0].Topic, singlePartitionTopic);
             }
         }
     }

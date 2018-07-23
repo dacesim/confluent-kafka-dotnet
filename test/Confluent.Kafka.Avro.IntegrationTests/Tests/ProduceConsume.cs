@@ -59,37 +59,46 @@ namespace Confluent.Kafka.Avro.IntegrationTests
                         favorite_number = i,
                         favorite_color = "blue"
                     };
-                    producer.ProduceAsync(topic, new Message<string, User> { Key = user.name, Value = user });
+                    producer.ProduceAsync(topic, user.name, user);
                 }
                 Assert.Equal(0, producer.Flush(TimeSpan.FromSeconds(10)));
             }
 
             using (var consumer = new Consumer<string, User>(consumerConfig, new AvroDeserializer<string>(), new AvroDeserializer<User>()))
             {
-                consumer.OnError += (o, error) => Assert.True(false, error.Reason);
+                bool done = false;
+                int i = 0;
+                consumer.OnMessage += (o, e) =>
+                {
+                    Assert.Equal(i.ToString(), e.Key);
+                    Assert.Equal(i.ToString(), e.Value.name);
+                    Assert.Equal(i, e.Value.favorite_number);
+                    Assert.Equal("blue", e.Value.favorite_color);
+
+                    i++;
+                };
+
+                consumer.OnError += (o, e) =>
+                {
+                    Assert.True(false, e.Reason);
+                };
+
+                consumer.OnConsumeError += (o, e) =>
+                {
+                    Assert.True(false, e.Error.Reason);
+                };
+
+                consumer.OnPartitionEOF += (o, e)
+                    => done = true;
+
                 consumer.Subscribe(topic);
 
-                int i = 0;
-                while (true)
+                while (!done)
                 {
-                    var record = consumer.Consume(TimeSpan.FromMilliseconds(100));
-                    if (record.Message == null)
-                    {
-                        Assert.Equal(i.ToString(), record.Message.Key);
-                        Assert.Equal(i.ToString(), record.Message.Value.name);
-                        Assert.Equal(i, record.Message.Value.favorite_number);
-                        Assert.Equal("blue", record.Message.Value.favorite_color);
-                        i += 1;
-                    }
-                    if (record.IsPartitionEOF)
-                    {
-                        break;
-                    }
+                    consumer.Poll(TimeSpan.FromMilliseconds(100));
                 }
 
                 Assert.Equal(100, i);
-
-                consumer.Close();
             }
         }
 

@@ -34,13 +34,10 @@ namespace Confluent.Kafka.Serialization
         /// <param name="topic">
         ///     The topic associated with the data (ignored by this deserializer).
         /// </param>
-        /// <param name="isNull">
-        ///     True if the data is null, false otherwise.
-        /// </param>
         /// <returns>
         ///     null
         /// </returns>
-        public Ignore Deserialize(string topic, ReadOnlySpan<byte> data, bool isNull)
+        public Ignore Deserialize(string topic, byte[] data)
         {
             return null;
         }

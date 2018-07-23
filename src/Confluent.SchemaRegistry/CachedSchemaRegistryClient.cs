@@ -28,10 +28,6 @@ namespace Confluent.SchemaRegistry
     /// </summary>
     public class CachedSchemaRegistryClient : ISchemaRegistryClient, IDisposable
     {
-        // note: these proeprty names are also specified in Confluent.Kafka.ConfigPropertyNames,
-        // which acts as a central location where all config properties are documented. However,
-        // Confluent.SchemaRegistry doesn't depend on Confluent.Kafka, so these are redefined here.
-        // If these change, they should be kept in-sync in the two places.
         private const string SchemaRegistryUrlPropertyName = "schema.registry.url";
         private const string SchemaRegistryConnectionTimeoutMsPropertyName = "schema.registry.connection.timeout.ms";
         private const string SchemaRegistryMaxCachedSchemasPropertyName = "schema.registry.max.cached.schemas";
@@ -223,7 +219,7 @@ namespace Confluent.SchemaRegistry
 
         /// <include file='include_docs.xml' path='API/Member[@name="ISchemaRegistryClient_GetLatestSchemaAsync"]/*' />
         public async Task<Schema> GetLatestSchemaAsync(string subject)
-            => await restService.GetLatestSchemaAsync(subject).ConfigureAwait(continueOnCapturedContext: false);
+            => await restService.GetLatestSchemaAsync(subject).ConfigureAwait(false);
 
         /// <include file='include_docs.xml' path='API/Member[@name="ISchemaRegistryClient_GetAllSubjectsAsync"]/*' />
         public Task<List<string>> GetAllSubjectsAsync()
@@ -231,7 +227,7 @@ namespace Confluent.SchemaRegistry
 
         /// <include file='include_docs.xml' path='API/Member[@name="ISchemaRegistryClient_IsCompatibleAsync"]/*' />
         public async Task<bool> IsCompatibleAsync(string subject, string schema)
-            => await restService.TestLatestCompatibilityAsync(subject, schema).ConfigureAwait(continueOnCapturedContext: false);
+            => await restService.TestLatestCompatibilityAsync(subject, schema).ConfigureAwait(false);
 
         /// <include file='include_docs.xml' path='API/Member[@name="ISchemaRegistryClient_ConstructKeySubjectName"]/*' />
         public string ConstructKeySubjectName(string topic)

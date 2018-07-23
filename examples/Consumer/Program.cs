@@ -20,8 +20,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Confluent.Kafka.Serialization;
 
 
@@ -32,6 +30,92 @@ namespace Confluent.Kafka.Examples.Consumer
 {
     public class Program
     {
+        /// <summary>
+        //      In this example:
+        ///         - offsets are auto commited.
+        ///         - consumer.Poll / OnMessage is used to consume messages.
+        ///         - no extra thread is created for the Poll loop.
+        /// </summary>
+        public static void Run_Poll(string brokerList, List<string> topics)
+        {
+            var config = new Dictionary<string, object>
+            {
+                { "bootstrap.servers", brokerList },
+                { "group.id", "csharp-consumer" },
+                { "enable.auto.commit", true },  // this is the default
+                { "auto.commit.interval.ms", 5000 },
+                { "statistics.interval.ms", 60000 },
+                { "session.timeout.ms", 6000 },
+                { "auto.offset.reset", "smallest" }
+            };
+
+            using (var consumer = new Consumer<Ignore, string>(config, null, new StringDeserializer(Encoding.UTF8)))
+            {
+                // Note: All event handlers are called on the main thread.
+
+                consumer.OnMessage += (_, msg)
+                    => Console.WriteLine($"Topic: {msg.Topic} Partition: {msg.Partition} Offset: {msg.Offset} {msg.Value}");
+
+                consumer.OnPartitionEOF += (_, end)
+                    => Console.WriteLine($"Reached end of topic {end.Topic} partition {end.Partition}, next message will be at offset {end.Offset}");
+
+                consumer.OnError += (_, error)
+                    => Console.WriteLine($"Error: {error}");
+
+                // Raised on deserialization errors or when a consumed message has an error != NoError.
+                consumer.OnConsumeError += (_, msg)
+                    => Console.WriteLine($"Error consuming from topic/partition/offset {msg.Topic}/{msg.Partition}/{msg.Offset}: {msg.Error}");
+
+                consumer.OnOffsetsCommitted += (_, commit) 
+                    => Console.WriteLine(
+                            commit.Error
+                                ? $"Failed to commit offsets: {commit.Error}"
+                                : $"Successfully committed offsets: [{string.Join(", ", commit.Offsets)}]");
+
+                // Raised when the consumer is assigned a new set of partitions.
+                consumer.OnPartitionsAssigned += (_, partitions) =>
+                {
+                    Console.WriteLine($"Assigned partitions: [{string.Join(", ", partitions)}], member id: {consumer.MemberId}");
+                    // If you don't add a handler to the OnPartitionsAssigned event,
+                    // the below .Assign call happens automatically. If you do, you
+                    // must call .Assign explicitly in order for the consumer to 
+                    // start consuming messages.
+                    consumer.Assign(partitions);
+                };
+
+                // Raised when the consumer's current assignment set has been revoked.
+                consumer.OnPartitionsRevoked += (_, partitions) =>
+                {
+                    Console.WriteLine($"Revoked partitions: [{string.Join(", ", partitions)}]");
+                    // If you don't add a handler to the OnPartitionsRevoked event,
+                    // the below .Unassign call happens automatically. If you do, 
+                    // you must call .Unassign explicitly in order for the consumer
+                    // to stop consuming messages from it's previously assigned 
+                    // partitions.
+                    consumer.Unassign();
+                };
+
+                consumer.OnStatistics += (_, json)
+                    => Console.WriteLine($"Statistics: {json}");
+
+                consumer.Subscribe(topics);
+
+                Console.WriteLine($"Subscribed to: [{string.Join(", ", consumer.Subscription)}]");
+
+                var cancelled = false;
+                Console.CancelKeyPress += (_, e) => {
+                    e.Cancel = true;  // prevent the process from terminating.
+                    cancelled = true;
+                };
+
+                Console.WriteLine("Ctrl-C to exit.");
+                while (!cancelled)
+                {
+                    consumer.Poll(TimeSpan.FromMilliseconds(100));
+                }
+            }
+        }
+
         /// <summary>
         ///     In this example
         ///         - offsets are manually committed.
@@ -54,9 +138,16 @@ namespace Confluent.Kafka.Examples.Consumer
             using (var consumer = new Consumer<Ignore, string>(config, null, new StringDeserializer(Encoding.UTF8)))
             {
                 // Note: All event handlers are called on the main thread.
-                
+
+                consumer.OnPartitionEOF += (_, end)
+                    => Console.WriteLine($"Reached end of topic {end.Topic} partition {end.Partition}, next message will be at offset {end.Offset}");
+
                 consumer.OnError += (_, error)
                     => Console.WriteLine($"Error: {error}");
+
+                // Raised on deserialization errors or when a consumed message has an error != NoError.
+                consumer.OnConsumeError += (_, error)
+                    => Console.WriteLine($"Consume error: {error}");
 
                 // Raised when the consumer is assigned a new set of partitions.
                 consumer.OnPartitionsAssigned += (_, partitions) =>
@@ -96,29 +187,17 @@ namespace Confluent.Kafka.Examples.Consumer
 
                 while (!cancelled)
                 {
-                    try
+                    if (!consumer.Consume(out Message<Ignore, string> msg, TimeSpan.FromMilliseconds(100)))
                     {
-                        var consumeResult = consumer.Consume(TimeSpan.FromMilliseconds(100));
-                        if (consumeResult.IsPartitionEOF)
-                        {
-                            Console.WriteLine($"Reached end of topic {consumeResult.Topic} partition {consumeResult.Partition}, next message will be at offset {consumeResult.Offset}");
-                        }
-                        if (consumeResult.Message == null)
-                        {
-                            continue;
-                        }
-
-                        Console.WriteLine($"Topic: {consumeResult.Topic} Partition: {consumeResult.Partition} Offset: {consumeResult.Offset} {consumeResult.Value}");
-
-                        if (consumeResult.Offset % 5 == 0)
-                        {
-                            var committedOffsets = consumer.CommitAsync(consumeResult).Result;
-                            Console.WriteLine($"Committed offset: {committedOffsets}");
-                        }
+                        continue;
                     }
-                    catch (ConsumeException e)
+
+                    Console.WriteLine($"Topic: {msg.Topic} Partition: {msg.Partition} Offset: {msg.Offset} {msg.Value}");
+
+                    if (msg.Offset % 5 == 0)
                     {
-                        Console.WriteLine($"Consume error: {e.Error}");
+                        var committedOffsets = consumer.CommitAsync(msg).Result;
+                        Console.WriteLine($"Committed offset: {committedOffsets}");
                     }
                 }
             }
@@ -152,41 +231,17 @@ namespace Confluent.Kafka.Examples.Consumer
                 consumer.OnError += (_, error)
                     => Console.WriteLine($"Error: {error}");
 
+                // Raised on deserialization errors or when a consumed message has an error != NoError.
+                consumer.OnConsumeError += (_, error)
+                    => Console.WriteLine($"Consume error: {error}");
+
                 while (true)
                 {
-                    try
+                    if (consumer.Consume(out Message<Ignore, string> msg, TimeSpan.FromSeconds(1)))
                     {
-                        var cr = consumer.Consume();
-                        if (cr.Message != null)
-                        {
-                            Console.WriteLine($"Received message at {cr.TopicPartitionOffset}: ${cr.Message}");
-                        }
-
-                        // Alternative:
-                        //
-                        // switch (cr.Error.Code)
-                        // {
-                        //     case ErrorCode.Local_TimedOut:
-                        //         // Only possible when timeout specified when calling Consume.
-                        //         break;
-                        //     case ErrorCode.NoError:
-                        //         Console.WriteLine($"Read message from {cr.TopicPartitionOffset}: ${cr.Message}");
-                        //         break;
-                        //     case ErrorCode.Local_PartitionEOF:
-                        //         Console.WriteLine($"Reached end of partition: {cr.TopicPartition}");
-                        //         break;
-                        //     default:
-                        //         Console.WriteLine($"Error occured: {cr.Error}");
-                        //         break;
-                        // }
-                    }
-                    catch (ConsumeException e)
-                    {
-                        Console.WriteLine($"Consume error: {e.Error}");
+                        Console.WriteLine($"Topic: {msg.Topic} Partition: {msg.Partition} Offset: {msg.Offset} {msg.Value}");
                     }
                 }
-
-                consumer.Close();
             }
         }
 
@@ -207,6 +262,9 @@ namespace Confluent.Kafka.Examples.Consumer
 
             switch (mode)
             {
+                case "poll":
+                    Run_Poll(brokerList, topics);
+                    break;
                 case "consume":
                     Run_Consume(brokerList, topics);
                     break;
