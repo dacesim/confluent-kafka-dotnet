@@ -14,6 +14,8 @@
 //
 // Refer to LICENSE for more information.
 
+#pragma warning disable xUnit1026
+
 using System;
 using System.Text;
 using System.Collections.Generic;
@@ -31,79 +33,41 @@ namespace Confluent.Kafka.IntegrationTests
         [Theory, MemberData(nameof(KafkaParameters))]
         public static void OnLog(string bootstrapServers, string singlePartitionTopic, string partitionedTopic)
         {
+            var logCount = 0;
+            Action<LogMessage> logger = (LogMessage m) => logCount += 1;
+
             var consumerConfig = new Dictionary<string, object>
             {
                 { "group.id", Guid.NewGuid().ToString() },
                 { "bootstrap.servers", bootstrapServers },
                 { "log_level", 7 },
-                { "debug", "all" }
+                { "debug", "all" },
+                { "log.delegate", logger }
             };
 
             var producerConfig = new Dictionary<string, object>
             {
                 { "bootstrap.servers", bootstrapServers },
                 { "log_level", 7 },
-                { "debug", "all" }
+                { "debug", "all" },
+                { "log.delegate", logger }
             };
 
-            // byte array producer.
-            int logCount = 0;
-            using (var producer = new Producer(producerConfig))
-            {
-                producer.OnLog += (_, LogMessage)
-                  => logCount += 1;
+            DeliveryReport<Null, string> dr;
 
-                producer.ProduceAsync(singlePartitionTopic, null, (byte[])null).Wait();
-                producer.Flush(TimeSpan.FromSeconds(10));
-            }
-            Assert.True(logCount > 0);
-
-            // serializing producer.
-            Message<Null, string> dr;
-            logCount = 0;
             using (var producer = new Producer<Null, string>(producerConfig, null, new StringSerializer(Encoding.UTF8)))
             {
-                producer.OnLog += (_, LogMessage)
-                  => logCount += 1;
-
-                dr = producer.ProduceAsync(singlePartitionTopic, null, "test value").Result;
+                dr = producer.ProduceAsync(singlePartitionTopic, new Message<Null, string> { Value = "test value" }).Result;
                 producer.Flush(TimeSpan.FromSeconds(10));
             }
             Assert.True(logCount > 0);
 
-            // wrapped byte array producer.
-            logCount = 0;
-            using (var producer = new Producer(producerConfig))
-            {
-                producer.OnLog += (_, LogMessage)
-                  => logCount += 1;
-
-                var sProducer = producer.GetSerializingProducer<Null, string>(null, new StringSerializer(Encoding.UTF8));
-                
-                sProducer.ProduceAsync(singlePartitionTopic, null, "test value").Wait();
-                producer.Flush(TimeSpan.FromSeconds(10));
-            }
-            Assert.True(logCount > 0);
-
-            // byte array consumer.
-            logCount = 0;
-            using (var consumer = new Consumer(consumerConfig))
-            {
-                consumer.OnLog += (_, LogMessage)
-                  => logCount += 1;
-
-                consumer.Poll(TimeSpan.FromMilliseconds(100));
-            }
-            Assert.True(logCount > 0);
-
-            // deserializing consumer.
             logCount = 0;
             using (var consumer = new Consumer<Null, string>(consumerConfig, null, new StringDeserializer(Encoding.UTF8)))
             {
-                consumer.OnLog += (_, LogMessage)
-                  => logCount += 1;
+                consumer.Consume(TimeSpan.FromMilliseconds(100));
 
-                consumer.Poll(TimeSpan.FromMilliseconds(100));
+                consumer.Close();
             }
             Assert.True(logCount > 0);
         }
