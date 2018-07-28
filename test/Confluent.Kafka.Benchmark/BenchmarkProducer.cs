@@ -19,20 +19,35 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.Linq;
 using System.Collections.Generic;
-using Confluent.Kafka.Serialization;
 
 
 namespace Confluent.Kafka.Benchmark
 {
     public static class BenchmarkProducer
     {
-        private static long BenchmarkProducerImpl(
-            string bootstrapServers, 
-            string topic, 
-            int nMessages, 
-            int nTests, 
-            int nHeaders,
-            bool useDeliveryHandler)
+        private class BenchmarkProducerDeliveryHandler : IDeliveryHandler
+        {
+            public int NumberOfMessages { get; private set; }
+            public AutoResetEvent AutoEvent { get; private set; }
+
+            public BenchmarkProducerDeliveryHandler(int numberOfMessages)
+            {
+                this.NumberOfMessages = numberOfMessages;
+                this.AutoEvent = new AutoResetEvent(false);
+            }
+
+            public bool MarshalData { get { return false; } }
+
+            public void HandleDeliveryReport(Message deliveryReport)
+            {
+                if (--NumberOfMessages == 0)
+                {
+                    AutoEvent.Set();
+                }
+            }
+        }
+
+        private static long BenchmarkProducerImpl(string bootstrapServers, string topic, int nMessages, int nTests, bool useDeliveryHandler)
         {
             // mirrors the librdkafka performance test example.
             var config = new Dictionary<string, object>
@@ -40,74 +55,50 @@ namespace Confluent.Kafka.Benchmark
                 { "bootstrap.servers", bootstrapServers },
                 { "queue.buffering.max.messages", 2000000 },
                 { "message.send.max.retries", 3 },
-                { "retry.backoff.ms", 500 },
-                { "linger.ms", 100 }
+                { "retry.backoff.ms", 500 }
             };
 
-            config["dotnet.producer.enable.delivery.report.headers"] = false;
-            config["dotnet.producer.enable.delivery.report.keys"] = false;
-            config["dotnet.producer.enable.delivery.report.values"] = false;
-            config["dotnet.producer.enable.delivery.report.timestamps"] = false;
+            Message firstDeliveryReport = null;
 
-            DeliveryReport<byte[], byte[]> firstDeliveryReport = null;
-
-            Headers headers = null;
-            if (nHeaders > 0)
+            using (var producer = new Producer(config))
             {
-                headers = new Headers();
-                for (int i=0; i<nHeaders; ++i)
+                for (var j=0; j<nTests; ++j)
                 {
-                    headers.Add($"header-{i+1}", new byte[] { (byte)i, (byte)(i+1), (byte)(i+2), (byte)(i+3) });
-                }
-            }
-
-            using (var producer = new Producer<byte[], byte[]>(config, new ByteArraySerializer(), new ByteArraySerializer()))
-            {
-                for (var j=0; j<nTests; j += 1)
-                {
-                    Console.WriteLine($"{producer.Name} producing on {topic} " + (useDeliveryHandler ? "[Action<Message>]" : "[Task]"));
+                    Console.WriteLine($"{producer.Name} producing on {topic} " + (useDeliveryHandler ? "[DeliveryHandler]" : "[Task]"));
 
                     byte cnt = 0;
                     var val = new byte[100].Select(a => ++cnt).ToArray();
 
                     // this avoids including connection setup, topic creation time, etc.. in result.
-                    firstDeliveryReport = producer.ProduceAsync(topic, new Message<byte[], byte[]> { Value = val, Headers = headers }).Result;
+                    firstDeliveryReport = producer.ProduceAsync(topic, null, val).Result;
 
                     var startTime = DateTime.Now.Ticks;
 
                     if (useDeliveryHandler)
                     {
-                        var autoEvent = new AutoResetEvent(false);
-                        var msgCount = nMessages;
-                        Action<DeliveryReport<byte[], byte[]>> deliveryHandler = (DeliveryReport<byte[], byte[]> deliveryReport) => 
-                        {
-                            if (--msgCount == 0)
-                            {
-                                autoEvent.Set();
-                            }
-                        };
+                        var deliveryHandler = new BenchmarkProducerDeliveryHandler(nMessages);
 
-                        for (int i = 0; i < nMessages; i += 1)
+                        for (int i = 0; i < nMessages; i++)
                         {
-                            producer.BeginProduce(topic, new Message<byte[], byte[]> { Value = val, Headers = headers }, deliveryHandler);
+                            producer.ProduceAsync(topic, null, val, deliveryHandler);
                         }
 
-                        autoEvent.WaitOne();
+                        deliveryHandler.AutoEvent.WaitOne();
                     }
                     else
                     {
                         var tasks = new Task[nMessages];
-                        for (int i = 0; i < nMessages; i += 1)
+                        for (int i = 0; i < nMessages; i++)
                         {
-                            tasks[i] = producer.ProduceAsync(topic, new Message<byte[], byte[]> { Value = val, Headers = headers });
+                            tasks[i] = producer.ProduceAsync(topic, null, val);
                         }
                         Task.WaitAll(tasks);
                     }
 
                     var duration = DateTime.Now.Ticks - startTime;
 
-                    Console.WriteLine($"Produced {nMessages} messages in {duration/10000.0:F0}ms");
-                    Console.WriteLine($"{nMessages / (duration/10000.0):F0}k msg/s");
+                    Console.WriteLine($"Produced {nMessages} in {duration/10000.0:F0}ms");
+                    Console.WriteLine($"{nMessages / (duration/10000.0):F0} messages/ms");
                 }
 
                 producer.Flush(TimeSpan.FromSeconds(10));
@@ -120,14 +111,14 @@ namespace Confluent.Kafka.Benchmark
         ///     Producer benchmark masquarading as an integration test.
         ///     Uses Task based produce method.
         /// </summary>
-        public static long TaskProduce(string bootstrapServers, string topic, int nMessages, int nHeaders, int nTests)
-            => BenchmarkProducerImpl(bootstrapServers, topic, nMessages, nTests, nHeaders, false);
+        public static long TaskProduce(string bootstrapServers, string topic, int nMessages, int nTests)
+            => BenchmarkProducerImpl(bootstrapServers, topic, nMessages, nTests, false);
 
         /// <summary>
         ///     Producer benchmark (with custom delivery handler) masquarading
         ///     as an integration test. Uses Task based produce method.
         /// </summary>
-        public static long DeliveryHandlerProduce(string bootstrapServers, string topic, int nMessages, int nHeaders, int nTests)
-            => BenchmarkProducerImpl(bootstrapServers, topic, nMessages, nTests, nHeaders, true);
+        public static long DeliveryHandlerProduce(string bootstrapServers, string topic, int nMessages, int nTests)
+            => BenchmarkProducerImpl(bootstrapServers, topic, nMessages, nTests, true);
     }
 }

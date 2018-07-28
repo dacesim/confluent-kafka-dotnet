@@ -79,8 +79,14 @@ namespace Confluent.Kafka.Examples.AvroSpecific
             using (var consumer = new Consumer<string, GenericRecord>(consumerConfig, new AvroDeserializer<string>(), new AvroDeserializer<GenericRecord>()))
             using (var producer = new Producer<string, GenericRecord>(producerConfig, new AvroSerializer<string>(), new AvroSerializer<GenericRecord>()))
             {
+                consumer.OnMessage += (o, e)
+                    => Console.WriteLine($"Key: {e.Key}\nValue: {e.Value}");
+
                 consumer.OnError += (_, e)
                     => Console.WriteLine("Error: " + e.Reason);
+
+                consumer.OnConsumeError += (_, e)
+                    => Console.WriteLine("Consume error: " + e.Error.Reason);
 
                 consumer.Subscribe(topicName);
 
@@ -89,18 +95,7 @@ namespace Confluent.Kafka.Examples.AvroSpecific
                 {
                     while (!cts.Token.IsCancellationRequested)
                     {
-                        try
-                        {
-                            var consumeResult = consumer.Consume(TimeSpan.FromMilliseconds(100));
-                            if (consumeResult.Message != null)
-                            {
-                                Console.WriteLine($"Key: {consumeResult.Message.Key}\nValue: {consumeResult.Value}");
-                            }
-                        }
-                        catch (ConsumeException e)
-                        {
-                            Console.WriteLine("Consume error: " + e.Error.Reason);
-                        }
+                        consumer.Poll(100);
                     }
                 });
                 
@@ -116,7 +111,7 @@ namespace Confluent.Kafka.Examples.AvroSpecific
                     record.Add("favorite_color", "blue");
 
                     producer
-                        .ProduceAsync(topicName, new Message<string, GenericRecord> { Key = text, Value = record })
+                        .ProduceAsync(topicName, text, record)
                         .ContinueWith(task => Console.WriteLine($"Wrote to: {task.Result.TopicPartitionOffset}"));
                 }
                 

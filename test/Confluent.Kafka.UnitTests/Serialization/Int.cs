@@ -37,10 +37,10 @@ namespace Confluent.Kafka.UnitTests.Serialization
         {
             var serializer = new IntSerializer();
             var bytes = serializer.Serialize("topic", 42);
-            Assert.Equal(4, bytes.Length);
+            Assert.Equal(bytes.Length, 4);
             // most significant byte in smallest address.
-            Assert.Equal(0, bytes[0]);
-            Assert.Equal(42, bytes[3]);
+            Assert.Equal(bytes[0], 0);
+            Assert.Equal(bytes[3], 42);
         }
 
         [Fact]
@@ -64,14 +64,14 @@ namespace Confluent.Kafka.UnitTests.Serialization
         }
 
         [Fact]
-        public void CanReconstructInt()
+        public void CanReconstruct()
         {
             var serializer = new IntSerializer();
             var deserializer = new IntDeserializer();
 
             foreach (int theInt in toTest)
             {
-                var reconstructed = deserializer.Deserialize("topic", serializer.Serialize("topic", theInt), false);
+                var reconstructed = deserializer.Deserialize("topic", serializer.Serialize("topic", theInt));
                 Assert.Equal(theInt, reconstructed);
             }
         }

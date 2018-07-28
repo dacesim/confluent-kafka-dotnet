@@ -14,15 +14,13 @@
 //
 // Refer to LICENSE for more information.
 
-using System;
 using System.Collections.Generic;
 
 
 namespace Confluent.Kafka.Serialization
 {
     /// <summary>
-    ///     A deserializer for System.Byte[] values. This deserializer creates a System.Byte[] 
-    ///     from the 
+    ///     A deserializer for System.Byte[] values. This deserializer simply passes through the provided System.Byte[] value.
     /// </summary>
     public class ByteArrayDeserializer : IDeserializer<byte[]>
     {
@@ -35,22 +33,15 @@ namespace Confluent.Kafka.Serialization
         /// <param name="data">
         ///     A byte array containing the serialized System.Byte[] value (or null).
         /// </param>
-        /// <param name="isNull">
-        ///     True if the data is null, false otherwise.
-        /// </param>
         /// <returns>
         ///     The deserialized System.Byte[] value.
         /// </returns>
-        public byte[] Deserialize(string topic, ReadOnlySpan<byte> data, bool isNull)
+        public byte[] Deserialize(string topic, byte[] data)
         {
-            if (isNull) { return null; }
-            return data.ToArray();
+            return data;
         }
 
-
-        /// <summary>
-        ///     Refer to <see cref="Confluent.Kafka.Serialization.IDeserializer{T}.Configure(IEnumerable{KeyValuePair{string, object}}, bool)" />
-        /// </summary>
+        /// <include file='../include_docs.xml' path='API/Member[@name="IDeserializer_Configure"]/*' />
         public IEnumerable<KeyValuePair<string, object>> Configure(IEnumerable<KeyValuePair<string, object>> config, bool isKey)
             => config;
 

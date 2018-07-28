@@ -25,21 +25,21 @@ namespace Confluent.Kafka.UnitTests
         public void Version()
         {
             // test that an exception is not thrown.
-            Assert.NotEqual(0, Library.Version);
+            Assert.NotEqual(Library.Version, 0);
         }
 
         [Fact]
         public void VersionString()
         {
             // test that an exception is not thrown.
-            Assert.NotNull(Library.VersionString);
+            Assert.NotEqual(Library.VersionString, null);
         }
 
         [Fact]
         public void DebugContexts()
         {
-            // test that an exception is not thrown.
-            Assert.NotEmpty(Library.DebugContexts);
+            // test that an exception is not thrown.      
+            Assert.NotEqual(Library.DebugContexts.Length, 0);
         }
     }
 }
