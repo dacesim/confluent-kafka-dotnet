@@ -14,8 +14,6 @@
 //
 // Refer to LICENSE for more information.
 
-#pragma warning disable xUnit1026
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -47,9 +45,9 @@ namespace Confluent.Kafka.IntegrationTests
             using (var consumer = new Consumer<Null, string>(consumerConfig, null, new StringDeserializer(Encoding.UTF8)))
             {
                 IEnumerable<TopicPartition> assignedPartitions = null;
-                ConsumeResult<Null, string> record;
+                Message<Null, string> message;
 
-                consumer.OnPartitionAssignmentReceived += (_, partitions) =>
+                consumer.OnPartitionsAssigned += (_, partitions) =>
                 {
                     consumer.Assign(partitions);
                     assignedPartitions = partitions;
@@ -57,30 +55,19 @@ namespace Confluent.Kafka.IntegrationTests
 
                 consumer.Subscribe(singlePartitionTopic);
 
-                while (assignedPartitions == null)
+                while (assignedPartitions == null) 
                 {
-                    consumer.Consume(TimeSpan.FromSeconds(1));
+                    consumer.Poll(TimeSpan.FromSeconds(1));
                 }
-                record = consumer.Consume(TimeSpan.FromSeconds(1));
-                Assert.Null(record.Message);
+                Assert.False(consumer.Consume(out message, TimeSpan.FromSeconds(1)));
 
-                Assert.False(producer.ProduceAsync(singlePartitionTopic, new Message<Null, string> { Value = "test value" }).Result.Error.IsError);
-                record = consumer.Consume(TimeSpan.FromSeconds(30));
-                Assert.NotNull(record.Message);
-
+                Assert.False(producer.ProduceAsync(singlePartitionTopic, null, "test value").Result.Error);
+                Assert.True(consumer.Consume(out message, TimeSpan.FromSeconds(30)));
                 consumer.Pause(assignedPartitions);
-                producer.ProduceAsync(singlePartitionTopic, new Message<Null, string> { Value = "test value 2" }).Wait();
-                record = consumer.Consume(TimeSpan.FromSeconds(2));
-                Assert.Null(record.Message);
+                producer.ProduceAsync(singlePartitionTopic, null, "test value 2").Wait();
+                Assert.False(consumer.Consume(out message, TimeSpan.FromSeconds(2)));
                 consumer.Resume(assignedPartitions);
-                record = consumer.Consume(TimeSpan.FromSeconds(10));
-                Assert.NotNull(record.Message);
-
-                // check that these don't throw.
-                consumer.Pause(new List<TopicPartition>());
-                consumer.Resume(new List<TopicPartition>());
-
-                consumer.Close();
+                Assert.True(consumer.Consume(out message, TimeSpan.FromSeconds(10)));
             }
         }
 

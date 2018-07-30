@@ -21,13 +21,12 @@ using System.Collections.Generic;
 namespace Confluent.Kafka.Serialization
 {
     /// <summary>
-    ///     A dummy serializer for use with values that must be null 
-    ///     (the <see cref="Confluent.Kafka.Null"/> class cannot be instantiated).
+    ///     A dummy serializer for use with values that must be null (the <see cref="Null"/> class cannot be instantiated).
     /// </summary>
     public class NullSerializer : ISerializer<Null>
     {
         /// <param name="data">
-        ///     Can only be null (the <see cref="Confluent.Kafka.Null"/> class cannot be instantiated).
+        ///     Can only be null (the <see cref="Null"/> class cannot be instantiated).
         /// </param>
         /// <param name="topic">
         ///     The topic associated with the data (ignored by this serializer).
@@ -40,13 +39,9 @@ namespace Confluent.Kafka.Serialization
             return null;
         }
 
-
-        /// <summary>
-        ///     Refer to <see cref="Confluent.Kafka.Serialization.ISerializer{T}.Configure(IEnumerable{KeyValuePair{string, object}}, bool)" />
-        /// </summary>
+        /// <include file='../include_docs.xml' path='API/Member[@name="ISerializer_Configure"]/*' />
         public IEnumerable<KeyValuePair<string, object>> Configure(IEnumerable<KeyValuePair<string, object>> config, bool isKey)
             => config;
-
 
         /// <summary>
         ///     Releases any unmanaged resources owned by the serializer (noop for this type).

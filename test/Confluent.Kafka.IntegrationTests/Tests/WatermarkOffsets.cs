@@ -14,8 +14,6 @@
 //
 // Refer to LICENSE for more information.
 
-#pragma warning disable xUnit1026
-
 using System;
 using System.Text;
 using System.Collections.Generic;
@@ -41,14 +39,13 @@ namespace Confluent.Kafka.IntegrationTests
 
             var testString = "hello world";
 
-            DeliveryReport<Null, string> dr;
+            Message<Null, string> dr;
             using (var producer = new Producer<Null, string>(producerConfig, null, new StringSerializer(Encoding.UTF8)))
-            using (var adminClient = new AdminClient(producer.Handle))
             {
-                dr = producer.ProduceAsync(singlePartitionTopic, new Message<Null, string> { Value = testString }).Result;
+                dr = producer.ProduceAsync(singlePartitionTopic, null, testString).Result;
                 producer.Flush(TimeSpan.FromSeconds(10));
 
-                var queryOffsets = adminClient.QueryWatermarkOffsets(new TopicPartition(singlePartitionTopic, 0), TimeSpan.FromSeconds(20));
+                var queryOffsets = producer.QueryWatermarkOffsets(new TopicPartition(singlePartitionTopic, 0));
                 Assert.NotEqual(queryOffsets.Low, Offset.Invalid);
                 Assert.NotEqual(queryOffsets.High, Offset.Invalid);
 
@@ -56,7 +53,7 @@ namespace Confluent.Kafka.IntegrationTests
                 //       I have seen queryOffsets.High < dr.Offset and also queryOffsets.High = dr.Offset + 1.
                 //       The former only once (or was I in error?). request.required.acks has a default value
                 //       of 1, so with only one broker, I assume the former should never happen.
-                // Console.WriteLine($"Query Offsets: [{queryOffsets.Low} {queryOffsets.High}]. DR Offset: {dr.Offset}");
+                Console.WriteLine($"Query Offsets: [{queryOffsets.Low} {queryOffsets.High}]. DR Offset: {dr.Offset}");
                 Assert.True(queryOffsets.Low < queryOffsets.High);
             }
 
@@ -67,23 +64,20 @@ namespace Confluent.Kafka.IntegrationTests
                 { "session.timeout.ms", 6000 }
             };
 
-            using (var consumer = new Consumer<byte[], byte[]>(consumerConfig, new ByteArrayDeserializer(), new ByteArrayDeserializer()))
-            using (var adminClient = new AdminClient(consumer.Handle))
+            using (var consumer = new Consumer(consumerConfig))
             {
                 consumer.Assign(new List<TopicPartitionOffset>() { dr.TopicPartitionOffset });
-                var record = consumer.Consume(TimeSpan.FromSeconds(10));
-                Assert.NotNull(record.Message);
+                Message msg;
+                Assert.True(consumer.Consume(out msg, TimeSpan.FromSeconds(10)));
 
-                var getOffsets = adminClient.GetWatermarkOffsets(dr.TopicPartition);
+                var getOffsets = consumer.GetWatermarkOffsets(dr.TopicPartition);
                 Assert.Equal(getOffsets.Low, Offset.Invalid);
                 // the offset of the next message to be read.
-                Assert.Equal(getOffsets.High, dr.Offset + 1);
+                Assert.Equal((long)getOffsets.High, dr.Offset + 1);
 
-                var queryOffsets = adminClient.QueryWatermarkOffsets(dr.TopicPartition, TimeSpan.FromSeconds(20));
+                var queryOffsets = consumer.QueryWatermarkOffsets(dr.TopicPartition);
                 Assert.NotEqual(queryOffsets.Low, Offset.Invalid);
                 Assert.Equal(getOffsets.High, queryOffsets.High);
-
-                consumer.Close();
             }
         }
 

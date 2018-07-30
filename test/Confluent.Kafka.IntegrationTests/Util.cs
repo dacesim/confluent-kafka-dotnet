@@ -35,7 +35,8 @@ namespace Confluent.Kafka.IntegrationTests
         {
             var producerConfig = new Dictionary<string, object> 
             { 
-                { "bootstrap.servers", bootstrapServers }
+                { "bootstrap.servers", bootstrapServers },
+                { "api.version.request", true }
             };
             
             var sb = new StringBuilder(size);
@@ -46,12 +47,12 @@ namespace Confluent.Kafka.IntegrationTests
             }
             var msg = sb.ToString();
 
-            DeliveryReport<Null, string> firstDeliveryReport = null;
+            Message<Null, string> firstDeliveryReport = null;
             using (var producer = new Producer<Null, string>(producerConfig, null, new StringSerializer(Encoding.UTF8)))
             {
                 for (int i=0; i<number; ++i)
                 {
-                    var dr = producer.ProduceAsync(topic, new Message<Null, string> { Value = msg }).Result;
+                    var dr = producer.ProduceAsync(topic, null, msg).Result;
                     Assert.NotNull(dr);
                     if (i == 0)
                     {

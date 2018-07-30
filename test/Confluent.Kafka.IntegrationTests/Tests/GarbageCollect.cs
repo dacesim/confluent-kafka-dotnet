@@ -14,8 +14,6 @@
 //
 // Refer to LICENSE for more information.
 
-#pragma warning disable xUnit1026
-
 using System;
 using System.Text;
 using System.Collections.Generic;
@@ -49,15 +47,13 @@ namespace Confluent.Kafka.IntegrationTests
 
             using (var producer = new Producer<Null, string>(producerConfig, null, new StringSerializer(Encoding.UTF8)))
             {
-                producer.ProduceAsync(singlePartitionTopic, new Message<Null, string> { Value = "test string" }).Wait();
+                producer.ProduceAsync(singlePartitionTopic, null, "test string").Wait();
             }
 
             using (var consumer = new Consumer<Null, string>(consumerConfig, null, new StringDeserializer(Encoding.UTF8)))
             {
                 consumer.Subscribe(singlePartitionTopic);
-                consumer.Consume(TimeSpan.FromMilliseconds(1000));
-
-                consumer.Close();
+                consumer.Poll(1000);
             }
 
             GC.Collect();
