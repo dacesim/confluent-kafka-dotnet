@@ -24,11 +24,13 @@ namespace Confluent.Kafka.UnitTests.Serialization
 {
     public class DoubleTests
     {
-        [Theory]
-        [MemberData(nameof(TestData))]
-        public void CanReconstruct(double value)
+        [Fact]
+        public void CanReconstructDouble()
         {
-            Assert.Equal(value, new DoubleDeserializer().Deserialize(null, new DoubleSerializer().Serialize(null, value)));
+            foreach (var value in TestData)
+            {
+                Assert.Equal(value, new DoubleDeserializer().Deserialize(null, new DoubleSerializer().Serialize(null, value), false));
+            }
         }
 
         [Fact]
@@ -44,33 +46,33 @@ namespace Confluent.Kafka.UnitTests.Serialization
         [Fact]
         public void DeserializeArgNullThrow()
         {
-            Assert.ThrowsAny<ArgumentNullException>(() => new DoubleDeserializer().Deserialize(null, null));
+            Assert.ThrowsAny<ArgumentNullException>(() => new DoubleDeserializer().Deserialize(null, null, true));
         }
 
         [Fact]
         public void DeserializeArgLengthNotEqual8Throw()
         {
-            Assert.ThrowsAny<ArgumentException>(() => new DoubleDeserializer().Deserialize(null, new byte[0]));
-            Assert.ThrowsAny<ArgumentException>(() => new DoubleDeserializer().Deserialize(null, new byte[7]));
-            Assert.ThrowsAny<ArgumentException>(() => new DoubleDeserializer().Deserialize(null, new byte[9]));
+            Assert.ThrowsAny<ArgumentException>(() => new DoubleDeserializer().Deserialize(null, new byte[0], false));
+            Assert.ThrowsAny<ArgumentException>(() => new DoubleDeserializer().Deserialize(null, new byte[7], false));
+            Assert.ThrowsAny<ArgumentException>(() => new DoubleDeserializer().Deserialize(null, new byte[9], false));
         }
 
-        public static IEnumerable<object[]> TestData()
+        public static double[] TestData
         {
-            double[] testData = new double[]
+            get
             {
-                0, 1, -1, 42, -42, 127, 128, 129, -127, -128,
-                -129,254, 255, 256, 257, -254, -255, -256, -257,
-                short.MinValue-1, short.MinValue, short.MinValue+1,
-                short.MaxValue-1, short.MaxValue,short.MaxValue+1,
-                int.MaxValue-1, int.MaxValue, int.MinValue, int.MinValue + 1,
-                double.MaxValue-1,double.MaxValue,double.MinValue,double.MinValue+1,
-                double.NaN,double.PositiveInfinity,double.NegativeInfinity,double.Epsilon,-double.Epsilon
-            };
+                double[] testData = new double[]
+                {
+                    0, 1, -1, 42, -42, 127, 128, 129, -127, -128,
+                    -129,254, 255, 256, 257, -254, -255, -256, -257,
+                    short.MinValue-1, short.MinValue, short.MinValue+1,
+                    short.MaxValue-1, short.MaxValue,short.MaxValue+1,
+                    int.MaxValue-1, int.MaxValue, int.MinValue, int.MinValue + 1,
+                    double.MaxValue-1,double.MaxValue,double.MinValue,double.MinValue+1,
+                    double.NaN,double.PositiveInfinity,double.NegativeInfinity,double.Epsilon,-double.Epsilon
+                };
 
-            foreach (var v in testData)
-            {
-                yield return new object[] { v };
+                return testData;
             }
         }
     }

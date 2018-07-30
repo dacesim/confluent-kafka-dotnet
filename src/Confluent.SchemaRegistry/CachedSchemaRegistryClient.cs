@@ -28,6 +28,10 @@ namespace Confluent.SchemaRegistry
     /// </summary>
     public class CachedSchemaRegistryClient : ISchemaRegistryClient, IDisposable
     {
+        // note: these proeprty names are also specified in Confluent.Kafka.ConfigPropertyNames,
+        // which acts as a central location where all config properties are documented. However,
+        // Confluent.SchemaRegistry doesn't depend on Confluent.Kafka, so these are redefined here.
+        // If these change, they should be kept in-sync in the two places.
         private const string SchemaRegistryUrlPropertyName = "schema.registry.url";
         private const string SchemaRegistryConnectionTimeoutMsPropertyName = "schema.registry.connection.timeout.ms";
         private const string SchemaRegistryMaxCachedSchemasPropertyName = "schema.registry.max.cached.schemas";
@@ -49,7 +53,10 @@ namespace Confluent.SchemaRegistry
         /// </summary>
         public const int DefaultMaxCachedSchemas = 1000;
 
-        /// <include file='include_docs.xml' path='API.Member[@name="ISchemaRegistryClient_MaxCachedSchemas"]/*' />
+
+        /// <summary>
+        ///     Refer to <see cref="Confluent.SchemaRegistry.ISchemaRegistryClient.MaxCachedSchemas" />
+        /// </summary>
         public int MaxCachedSchemas
             => identityMapCapacity;
 
@@ -119,7 +126,10 @@ namespace Confluent.SchemaRegistry
             return false;
         }
 
-        /// <include file='include_docs.xml' path='API/Member[@name="ISchemaRegistryClient_GetSchemaIdAsync"]/*' />
+
+        /// <summary>
+        ///     Refer to <see cref="Confluent.SchemaRegistry.ISchemaRegistryClient.GetSchemaIdAsync(string, string)" />
+        /// </summary>
         public Task<int> GetSchemaIdAsync(string subject, string schema)
         {
             lock (cacheLock)
@@ -147,7 +157,10 @@ namespace Confluent.SchemaRegistry
             }
         }
 
-        /// <include file='include_docs.xml' path='API/Member[@name="ISchemaRegistryClient_RegisterSchemaAsync"]/*' />
+
+        /// <summary>
+        ///     Refer to <see cref="Confluent.SchemaRegistry.ISchemaRegistryClient.RegisterSchemaAsync(string, string)" />
+        /// </summary>
         public Task<int> RegisterSchemaAsync(string subject, string schema)
         {
             lock (cacheLock)
@@ -175,7 +188,10 @@ namespace Confluent.SchemaRegistry
             }
         }
 
-        /// <include file='include_docs.xml' path='API/Member[@name="ISchemaRegistryClient_GetSchemaAsync"]/*' />
+
+        /// <summary>
+        ///     Refer to <see cref="Confluent.SchemaRegistry.ISchemaRegistryClient.GetSchemaAsync(int)" />
+        /// </summary>
         public Task<string> GetSchemaAsync(int id)
         {
             lock (cacheLock)
@@ -192,7 +208,10 @@ namespace Confluent.SchemaRegistry
             }
         }
 
-        /// <include file='include_docs.xml' path='API/Member[@name="ISchemaRegistryClient_GetSchemaAsyncSubjectVersion"]/*' />
+
+        /// <summary>
+        ///     Refer to <see cref="Confluent.SchemaRegistry.ISchemaRegistryClient.GetSchemaAsync(string, int)" />
+        /// </summary>
         public Task<string> GetSchemaAsync(string subject, int version)
         {
             lock (cacheLock)
@@ -217,25 +236,42 @@ namespace Confluent.SchemaRegistry
             }
         }
 
-        /// <include file='include_docs.xml' path='API/Member[@name="ISchemaRegistryClient_GetLatestSchemaAsync"]/*' />
-        public async Task<Schema> GetLatestSchemaAsync(string subject)
-            => await restService.GetLatestSchemaAsync(subject).ConfigureAwait(false);
 
-        /// <include file='include_docs.xml' path='API/Member[@name="ISchemaRegistryClient_GetAllSubjectsAsync"]/*' />
+        /// <summary>
+        ///     Refer to <see cref="Confluent.SchemaRegistry.ISchemaRegistryClient.GetLatestSchemaAsync(string)" />
+        /// </summary>
+        public async Task<Schema> GetLatestSchemaAsync(string subject)
+            => await restService.GetLatestSchemaAsync(subject).ConfigureAwait(continueOnCapturedContext: false);
+
+
+
+        /// <summary>
+        ///     Refer to <see cref="Confluent.SchemaRegistry.ISchemaRegistryClient.GetAllSubjectsAsync" />
+        /// </summary>
         public Task<List<string>> GetAllSubjectsAsync()
             => restService.GetSubjectsAsync();
 
-        /// <include file='include_docs.xml' path='API/Member[@name="ISchemaRegistryClient_IsCompatibleAsync"]/*' />
-        public async Task<bool> IsCompatibleAsync(string subject, string schema)
-            => await restService.TestLatestCompatibilityAsync(subject, schema).ConfigureAwait(false);
 
-        /// <include file='include_docs.xml' path='API/Member[@name="ISchemaRegistryClient_ConstructKeySubjectName"]/*' />
+        /// <summary>
+        ///     Refer to <see cref="Confluent.SchemaRegistry.ISchemaRegistryClient.IsCompatibleAsync(string, string)" />
+        /// </summary>
+        public async Task<bool> IsCompatibleAsync(string subject, string schema)
+            => await restService.TestLatestCompatibilityAsync(subject, schema).ConfigureAwait(continueOnCapturedContext: false);
+
+
+        /// <summary>
+        ///     Refer to <see cref="Confluent.SchemaRegistry.ISchemaRegistryClient.ConstructKeySubjectName(string)" />
+        /// </summary>
         public string ConstructKeySubjectName(string topic)
             => $"{topic}-key";
 
-        /// <include file='include_docs.xml' path='API/Member[@name="ISchemaRegistryClient_ConstructValueSubjectName"]/*' />
+
+        /// <summary>
+        ///     Refer to <see cref="Confluent.SchemaRegistry.ISchemaRegistryClient.ConstructValueSubjectName(string)" />
+        /// </summary>
         public string ConstructValueSubjectName(string topic)
             => $"{topic}-value";
+
 
         /// <summary>
         ///     Releases unmanaged resources owned by this CachedSchemaRegistryClient instance.
