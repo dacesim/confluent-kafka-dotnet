@@ -55,8 +55,8 @@ namespace AvroBlogExample
                 record.Add("IP", "127.0.0.1");
                 record.Add("Message", "a test log message");
                 record.Add("Severity", new GenericEnum(logLevelSchema, "Error"));
-                producer.ProduceAsync("log-messages", null, record)
-                    .ContinueWith(dr => Console.WriteLine(dr.Result.Error 
+                producer.ProduceAsync("log-messages", new Message<Null, GenericRecord> { Value = record })
+                    .ContinueWith(dr => Console.WriteLine(dr.Result.Error.IsError 
                         ? $"error producing message: {dr.Result.Error.Reason}"
                         : $"produced to: {dr.Result.TopicPartitionOffset}"));
 
@@ -74,14 +74,16 @@ namespace AvroBlogExample
 
             using (var producer = new Producer<Null, MessageTypes.LogMessage>(config, null, new AvroSerializer<MessageTypes.LogMessage>()))
             {
-                producer.ProduceAsync(
-                    "log-messages", null, 
-                    new MessageTypes.LogMessage
+                producer.ProduceAsync("log-messages", 
+                    new Message<Null,MessageTypes.LogMessage> 
                     {
-                        IP = "192.168.0.1",
-                        Message = "a test message 2",
-                        Severity = MessageTypes.LogLevel.Info,
-                        Tags = new Dictionary<string, string> { { "location", "CA" } }
+                        Value = new MessageTypes.LogMessage
+                        {
+                            IP = "192.168.0.1",
+                            Message = "a test message 2",
+                            Severity = MessageTypes.LogLevel.Info,
+                            Tags = new Dictionary<string, string> { { "location", "CA" } }
+                        }
                     });
                 producer.Flush(TimeSpan.FromSeconds(30));
             }
@@ -100,17 +102,22 @@ namespace AvroBlogExample
             using (var consumer = new Consumer<Null, MessageTypes.LogMessage>(
                 consumerConfig, null, new AvroDeserializer<MessageTypes.LogMessage>()))
             {
-                consumer.OnConsumeError 
-                    += (_, error) => Console.WriteLine($"an error occured: {error.Error.Reason}");
-
-                consumer.OnMessage 
-                    += (_, msg) => Console.WriteLine($"{msg.Timestamp.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss")}: [{msg.Value.Severity}] {msg.Value.Message}");
-
                 consumer.Subscribe("log-messages");
 
                 while (true)
                 {
-                    consumer.Poll(TimeSpan.FromSeconds(1));
+                    try
+                    {
+                        var consumeResult = consumer.Consume(TimeSpan.FromSeconds(1));
+                        if (consumeResult.Message != null)
+                        {
+                            Console.WriteLine($"{consumeResult.Message.Timestamp.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss")}: [{consumeResult.Value.Severity}] {consumeResult.Value.Message}");
+                        }
+                    }
+                    catch (ConsumeException e)
+                    {
+                        Console.WriteLine($"an error occured: {e.Error.Reason}");
+                    }
                 }
             }
         }

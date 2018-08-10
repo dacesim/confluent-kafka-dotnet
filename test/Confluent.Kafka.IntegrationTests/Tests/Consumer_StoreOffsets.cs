@@ -14,6 +14,8 @@
 //
 // Refer to LICENSE for more information.
 
+#pragma warning disable xUnit1026
+
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -30,14 +32,15 @@ namespace Confluent.Kafka.IntegrationTests
         [Theory, MemberData(nameof(KafkaParameters))]
         public static void Consumer_StoreOffsets(string bootstrapServers, string topic, string partitionedTopic)
         {
-            
+            LogToFile("start Consumer_StoreOffsets");
+
             var consumerConfig = new Dictionary<string, object>
             {
                 { "group.id", Guid.NewGuid().ToString() },
                 { "bootstrap.servers", bootstrapServers },
                 { "auto.offset.reset", "latest" },
-                { "enable.auto.commit", true},
-                { "enable.auto.offset.store", false}
+                { "enable.auto.commit", true },
+                { "enable.auto.offset.store", false }
             };
 
             var producerConfig = new Dictionary<string, object> { { "bootstrap.servers", bootstrapServers } };
@@ -46,9 +49,9 @@ namespace Confluent.Kafka.IntegrationTests
             using (var consumer = new Consumer<Null, string>(consumerConfig, null, new StringDeserializer(Encoding.UTF8)))
             {
                 IEnumerable<TopicPartition> assignedPartitions = null;
-                Message<Null, string> message;
+                ConsumeResult<Null, string> record;
 
-                consumer.OnPartitionsAssigned += (_, partitions) =>
+                consumer.OnPartitionAssignmentReceived += (_, partitions) =>
                 {
                     consumer.Assign(partitions);
                     assignedPartitions = partitions;
@@ -58,20 +61,27 @@ namespace Confluent.Kafka.IntegrationTests
 
                 while (assignedPartitions == null)
                 {
-                    consumer.Poll(TimeSpan.FromSeconds(1));
+                    consumer.Consume(TimeSpan.FromSeconds(1));
                 }
 
-                Assert.False(consumer.Consume(out message, TimeSpan.FromSeconds(1)));
+                record = consumer.Consume(TimeSpan.FromSeconds(1));
+                Assert.Null(record.Message);
 
-                Assert.False(producer.ProduceAsync(topic, null, "test store offset value").Result.Error);
-                Assert.True(consumer.Consume(out message, TimeSpan.FromSeconds(30)));
-                var result = consumer.StoreOffset(message);
+                Assert.False(producer.ProduceAsync(topic, new Message<Null, string> { Value = "test store offset value" }).Result.Error.IsError);
+                record = consumer.Consume(TimeSpan.FromSeconds(30));
+                Assert.NotNull(record.Message);
 
-                Assert.Equal(ErrorCode.NoError, result.Error.Code);
-                Assert.Equal(message.Topic, result.Topic);
-                Assert.Equal(message.Partition, result.Partition);
-                Assert.Equal(message.Offset.Value+1, result.Offset.Value);
+                // test doesn't throw.
+                consumer.StoreOffset(record);
+
+                // test doesn't throw.
+                consumer.StoreOffsets(new List<TopicPartitionOffset>());
+
+                consumer.Unsubscribe();
             }
+
+            Assert.Equal(0, Library.HandleCount);
+            LogToFile("end   Consumer_StoreOffsets");
         }
 
     }

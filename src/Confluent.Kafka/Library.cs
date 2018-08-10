@@ -46,8 +46,8 @@ namespace Confluent.Kafka
         {
             get
             {
-                LibRdKafka.Initialize(null);
-                return (int) LibRdKafka.version();
+                Librdkafka.Initialize(null);
+                return (int) Librdkafka.version();
             }
         }
 
@@ -58,8 +58,8 @@ namespace Confluent.Kafka
         {
             get
             {
-                LibRdKafka.Initialize(null);
-                return Util.Marshal.PtrToStringUTF8(LibRdKafka.version_str());
+                Librdkafka.Initialize(null);
+                return Util.Marshal.PtrToStringUTF8(Librdkafka.version_str());
             }
         }
 
@@ -70,8 +70,8 @@ namespace Confluent.Kafka
         {
             get
             {
-                LibRdKafka.Initialize(null);
-                return Util.Marshal.PtrToStringUTF8(LibRdKafka.get_debug_contexts()).Split(',');
+                Librdkafka.Initialize(null);
+                return Util.Marshal.PtrToStringUTF8(Librdkafka.get_debug_contexts()).Split(',');
             }
         }
 
@@ -79,7 +79,7 @@ namespace Confluent.Kafka
         ///     true if librdkafka has been successfully loaded, false if not.
         /// </summary>
         public static bool IsLoaded
-            => LibRdKafka.IsInitialized;
+            => Librdkafka.IsInitialized;
 
         /// <summary>
         ///     Loads the native librdkafka library. Does nothing if the library is
@@ -110,7 +110,22 @@ namespace Confluent.Kafka
         ///     automatically on first use of a Producer or Consumer instance.
         /// </remarks>
         public static bool Load(string path)
-            => LibRdKafka.Initialize(path);
+            => Librdkafka.Initialize(path);
 
+        private static object instanceCountLockObj = new object();
+        private static int kafkaHandleCreateCount = 0;
+        private static int kafkaHandleDestroyCount = 0;
+
+        internal static void IncrementKafkaHandleCreateCount() { lock (instanceCountLockObj) { kafkaHandleCreateCount += 1; } }
+        internal static void IncrementKafkaHandleDestroyCount() { lock (instanceCountLockObj) { kafkaHandleDestroyCount += 1; } }
+
+        /// <summary>
+        ///     The total number librdkafka client instances that have been
+        ///     created and not yet disposed.
+        /// </summary>
+        public static int HandleCount
+        {
+            get { lock(instanceCountLockObj) { return kafkaHandleCreateCount - kafkaHandleDestroyCount; } }
+        }
     }
 }

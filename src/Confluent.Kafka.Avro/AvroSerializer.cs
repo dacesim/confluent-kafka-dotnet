@@ -45,9 +45,6 @@ namespace Confluent.Kafka.Serialization
 
         private IAvroSerializerImpl<T> serializerImpl;
 
-        private const string InitialBufferSizePropertyName = "avro.serializer.buffer.bytes";
-
-        private const string AutoRegisterSchemaPropertyName = "avro.serializer.auto.register.schemas";
 
         /// <summary>
         ///     The default initial size (in bytes) of buffers used for message 
@@ -144,7 +141,10 @@ namespace Confluent.Kafka.Serialization
             return serializerImpl.Serialize(topic, data);
         }
 
-        /// <include file='../Confluent.Kafka/include_docs.xml' path='API/Member[@name="ISerializer_Configure"]/*' />
+
+        /// <summary>
+        ///     Refer to <see cref="Confluent.Kafka.Serialization.IDeserializer{T}.Configure(IEnumerable{KeyValuePair{string, object}}, bool)" />
+        /// </summary>
         public IEnumerable<KeyValuePair<string, object>> Configure(IEnumerable<KeyValuePair<string, object>> config, bool isKey)
         {
             var keyOrValue = isKey ? "Key" : "Value";
@@ -154,15 +154,15 @@ namespace Confluent.Kafka.Serialization
 
             if (avroConfig.Count() != 0)
             {
-                int? initialBufferSize = (int?)Utils.ExtractPropertyValue(config, isKey, InitialBufferSizePropertyName, "AvroSerializer", typeof(int));
+                int? initialBufferSize = (int?)Utils.ExtractPropertyValue(config, isKey, ConfigPropertyNames.InitialBufferSizePropertyName, "AvroSerializer", typeof(int));
                 if (initialBufferSize != null) { this.initialBufferSize = initialBufferSize.Value; }
 
-                bool? autoRegisterSchema = (bool?)Utils.ExtractPropertyValue(config, isKey, AutoRegisterSchemaPropertyName, "AvroSerializer", typeof(bool));
+                bool? autoRegisterSchema = (bool?)Utils.ExtractPropertyValue(config, isKey, ConfigPropertyNames.AutoRegisterSchemaPropertyName, "AvroSerializer", typeof(bool));
                 if (autoRegisterSchema != null) { this.autoRegisterSchema = autoRegisterSchema.Value; }
 
                 foreach (var property in avroConfig)
                 {
-                    if (property.Key != AutoRegisterSchemaPropertyName && property.Key != InitialBufferSizePropertyName)
+                    if (property.Key != ConfigPropertyNames.AutoRegisterSchemaPropertyName && property.Key != ConfigPropertyNames.InitialBufferSizePropertyName)
                     {
                         throw new ArgumentException($"{keyOrValue} AvroSerializer: unexpected configuration parameter {property.Key}");
                     }
@@ -193,9 +193,27 @@ namespace Confluent.Kafka.Serialization
         /// </summary>
         public void Dispose() 
         {
-            if (disposeClientOnDispose)
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+
+        /// <summary>
+        ///     Releases the unmanaged resources used by this object
+        ///     and optionally disposes the managed resources.
+        /// </summary>
+        /// <param name="disposing">
+        ///     true to release both managed and unmanaged resources;
+        ///     false to release only unmanaged resources.
+        /// </param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
             {
-                schemaRegistryClient.Dispose();
+                if (disposeClientOnDispose)
+                {
+                    schemaRegistryClient.Dispose();
+                }
             }
         }
 
