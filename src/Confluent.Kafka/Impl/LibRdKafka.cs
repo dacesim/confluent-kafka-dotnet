@@ -348,6 +348,11 @@ namespace Confluent.Kafka.Impl
                             is64 ? "x64" : "x86");
                         path = Path.Combine(dllDirectory, "librdkafka.dll");
                     }
+
+                    if (!File.Exists(path))
+                    {
+                        path = Path.Combine(baseDirectory, "librdkafka.dll");
+                    }
                 }
 
                 if (WindowsNative.LoadLibraryEx(path, IntPtr.Zero, WindowsNative.LoadLibraryFlags.LOAD_WITH_ALTERED_SEARCH_PATH) == IntPtr.Zero)
