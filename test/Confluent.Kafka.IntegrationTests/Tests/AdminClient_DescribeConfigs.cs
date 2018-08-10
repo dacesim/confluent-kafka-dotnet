@@ -36,8 +36,6 @@ namespace Confluent.Kafka.IntegrationTests
         [Theory, MemberData(nameof(KafkaParameters))]
         public static void AdminClient_DescribeConfigs(string bootstrapServers, string singlePartitionTopic, string partitionedTopic)
         {
-            LogToFile("start AdminClient_DescribeConfigs");
-
             using (var adminClient = new AdminClient(new Dictionary<string, object> { { "bootstrap.servers", bootstrapServers } }))
             {
                 // broker configs
@@ -116,9 +114,6 @@ namespace Confluent.Kafka.IntegrationTests
                 //     new ConfigResource { Name = "my-nonsense-topic", ResourceType = ConfigType.Topic }
                 // }).Result;
             }
-
-            Assert.Equal(0, Library.HandleCount);
-            LogToFile("end   AdminClient_DescribeConfigs");
         }
 
     }

@@ -34,8 +34,6 @@ namespace Confluent.Kafka.IntegrationTests
         [Theory, MemberData(nameof(KafkaParameters))]
         public static void Consumer_Pause_Resume(string bootstrapServers, string singlePartitionTopic, string partitionedTopic)
         {
-            LogToFile("start Consumer_Pause_Resume");
-
             var consumerConfig = new Dictionary<string, object>
             {
                 { "group.id", Guid.NewGuid().ToString() },
@@ -84,9 +82,6 @@ namespace Confluent.Kafka.IntegrationTests
 
                 consumer.Close();
             }
-
-            Assert.Equal(0, Library.HandleCount);
-            LogToFile("end   Consumer_Pause_Resume");
         }
 
     }

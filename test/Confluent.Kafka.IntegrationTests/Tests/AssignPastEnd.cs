@@ -34,8 +34,6 @@ namespace Confluent.Kafka.IntegrationTests
         [Theory, MemberData(nameof(KafkaParameters))]
         public static void AssignPastEnd(string bootstrapServers, string singlePartitionTopic, string partitionedTopic)
         {
-            LogToFile("start AssignPastEnd");
-
             var consumerConfig = new Dictionary<string, object>
             {
                 { "group.id", Guid.NewGuid().ToString() },
@@ -66,6 +64,8 @@ namespace Confluent.Kafka.IntegrationTests
                 consumer.Assign(new List<TopicPartitionOffset>() { new TopicPartitionOffset(dr.TopicPartition, dr.Offset+2) });
                 consumer.Consume(TimeSpan.FromSeconds(10));
                 Assert.Null(record.Message);
+
+                consumer.Close();
             }
 
             consumerConfig["auto.offset.reset"] = "earliest";
@@ -81,10 +81,9 @@ namespace Confluent.Kafka.IntegrationTests
                 consumer.Assign(new List<TopicPartitionOffset>() { new TopicPartitionOffset(dr.TopicPartition, dr.Offset+2) });
                 record = consumer.Consume(TimeSpan.FromSeconds(10));
                 Assert.NotNull(record.Message);
-            }
 
-            Assert.Equal(0, Library.HandleCount);
-            LogToFile("end   AssignPastEnd");
+                consumer.Close();
+            }
         }
 
     }

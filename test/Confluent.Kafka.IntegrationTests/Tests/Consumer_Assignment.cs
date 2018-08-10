@@ -34,8 +34,6 @@ namespace Confluent.Kafka.IntegrationTests
         [Theory, MemberData(nameof(KafkaParameters))]
         public static void Consumer_Assignment(string bootstrapServers, string singlePartitionTopic, string partitionedTopic)
         {
-            LogToFile("start Consumer_Assignment");
-
             int N = 2;
             var firstProduced = Util.ProduceMessages(bootstrapServers, singlePartitionTopic, 1, N);
 
@@ -72,9 +70,6 @@ namespace Confluent.Kafka.IntegrationTests
 
                 consumer.Close();
             }
-
-            Assert.Equal(0, Library.HandleCount);
-            LogToFile("end   Consumer_Assignment");
         }
 
     }
