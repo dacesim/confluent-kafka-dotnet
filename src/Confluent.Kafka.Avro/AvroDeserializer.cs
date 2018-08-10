@@ -91,13 +91,10 @@ namespace Confluent.Kafka.Serialization
         ///     A byte array containing the object serialized in the format produced
         ///     by <see cref="AvroSerializer{T}" />.
         /// </param>
-        /// <param name="isNull">
-        ///     True if the data is null, false otherwise.
-        /// </param>
         /// <returns>
         ///     The deserialized <typeparamref name="T"/> value.
         /// </returns>
-        public T Deserialize(string topic, ReadOnlySpan<byte> data, bool isNull)
+        public T Deserialize(string topic, byte[] data)
         {
             if (deserializerImpl == null)
             {
@@ -106,12 +103,10 @@ namespace Confluent.Kafka.Serialization
                     : new SpecificDeserializerImpl<T>(schemaRegistryClient);
             }
 
-            return deserializerImpl.Deserialize(topic, data.ToArray());
+            return deserializerImpl.Deserialize(topic, data);
         }
 
-        /// <summary>
-        ///     Refer to: <see cref="Confluent.Kafka.Serialization.ISerializer{T}.Configure(IEnumerable{KeyValuePair{string, object}}, bool)" />
-        /// </summary>
+        /// <include file='../Confluent.Kafka/include_docs.xml' path='API/Member[@name="IDeserializer_Configure"]/*' />
         public IEnumerable<KeyValuePair<string, object>> Configure(IEnumerable<KeyValuePair<string, object>> config, bool isKey)
         {
             var keyOrValue = isKey ? "Key" : "Value";
@@ -146,28 +141,11 @@ namespace Confluent.Kafka.Serialization
         /// </summary>
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-
-        /// <summary>
-        ///     Releases the unmanaged resources used by this object
-        ///     and optionally disposes the managed resources.
-        /// </summary>
-        /// <param name="disposing">
-        ///     true to release both managed and unmanaged resources;
-        ///     false to release only unmanaged resources.
-        /// </param>
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
+            if (disposeClientOnDispose)
             {
-                if (disposeClientOnDispose)
-                {
-                    schemaRegistryClient.Dispose();
-                }
+                schemaRegistryClient.Dispose();
             }
         }
+
     }
 }

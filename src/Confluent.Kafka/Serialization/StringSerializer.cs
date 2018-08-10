@@ -30,6 +30,16 @@ namespace Confluent.Kafka.Serialization
         private Encoding encoding;
 
         /// <summary>
+        ///     Name of the configuration parameter used to specify the encoding when serializing keys.
+        /// </summary>
+        public const string KeyEncodingConfigParam = "dotnet.string.serializer.encoding.key";
+
+        /// <summary>
+        ///     Name of the configuration parameter used to specify the encoding when serializing values.
+        /// </summary>
+        public const string ValueEncodingConfigParam = "dotnet.string.serializer.encoding.value";
+
+        /// <summary>
         ///     Initializes a new StringSerializer class instance.
         /// </summary>
         /// <param name="encoding">
@@ -75,13 +85,10 @@ namespace Confluent.Kafka.Serialization
             return encoding.GetBytes(data);
         }
 
-
-        /// <summary>
-        ///     Refer to <see cref="Confluent.Kafka.Serialization.ISerializer{T}.Configure(IEnumerable{KeyValuePair{string, object}}, bool)" />
-        /// </summary>
+        /// <include file='../include_docs.xml' path='API/Member[@name="ISerializer_Configure"]/*' />
         public IEnumerable<KeyValuePair<string, object>> Configure(IEnumerable<KeyValuePair<string, object>> config, bool isKey)
         {
-            var propertyName = isKey ? ConfigPropertyNames.SerializerKeyEncodingConfigParam : ConfigPropertyNames.SerializerValueEncodingConfigParam;
+            var propertyName = isKey ? KeyEncodingConfigParam : ValueEncodingConfigParam;
             var keyOrValue = isKey ? "Key" : "Value";
 
             if (config.Any(ci => ci.Key == propertyName))

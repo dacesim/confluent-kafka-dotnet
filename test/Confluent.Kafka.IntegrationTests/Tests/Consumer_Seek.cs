@@ -14,8 +14,6 @@
 //
 // Refer to LICENSE for more information.
 
-#pragma warning disable xUnit1026
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,8 +33,6 @@ namespace Confluent.Kafka.IntegrationTests
         [Theory, MemberData(nameof(KafkaParameters))]
         public static void Consumer_Seek(string bootstrapServers, string singlePartitionTopic, string partitionedTopic)
         {
-            LogToFile("start Consumer_Seek");
-
             var consumerConfig = new Dictionary<string, object>
             {
                 { "group.id", Guid.NewGuid().ToString() },
@@ -44,7 +40,7 @@ namespace Confluent.Kafka.IntegrationTests
                 { "bootstrap.servers", bootstrapServers }
             };
 
-            var producerConfig = new Dictionary<string, object> { {"bootstrap.servers", bootstrapServers} };
+            var producerConfig = new Dictionary<string, object> { {"bootstrap.servers", bootstrapServers}};
 
             using (var producer = new Producer<Null, string>(producerConfig, null, new StringSerializer(Encoding.UTF8)))
             using (var consumer = new Consumer<Null, string>(consumerConfig, null, new StringDeserializer(Encoding.UTF8)))
@@ -52,28 +48,25 @@ namespace Confluent.Kafka.IntegrationTests
                 consumer.OnError += (_, e) =>
                     Assert.False(true);
 
+                consumer.OnConsumeError += (_, e) =>
+                    Assert.False(true);
+
                 const string checkValue = "check value";
-                var dr = producer.ProduceAsync(singlePartitionTopic, new Message<Null, string> { Value = checkValue }).Result;
-                var dr2 = producer.ProduceAsync(singlePartitionTopic, new Message<Null, string> { Value = "second value" }).Result;
-                var dr3 = producer.ProduceAsync(singlePartitionTopic, new Message<Null, string> { Value = "third value" }).Result;
+                var dr = producer.ProduceAsync(singlePartitionTopic, null, checkValue).Result;
+                var dr2 = producer.ProduceAsync(singlePartitionTopic, null, "second value").Result;
+                var dr3 = producer.ProduceAsync(singlePartitionTopic, null, "third value").Result;
 
                 consumer.Assign(new TopicPartitionOffset[] { new TopicPartitionOffset(singlePartitionTopic, 0, dr.Offset) });
 
-                ConsumeResult<Null, string> record = consumer.Consume(TimeSpan.FromSeconds(30));
-                Assert.NotNull(record.Message);
-                record = consumer.Consume(TimeSpan.FromSeconds(30));
-                Assert.NotNull(record.Message);
-                record = consumer.Consume(TimeSpan.FromSeconds(30));
-                Assert.NotNull(record.Message);
+                Message<Null, string> message;
+                Assert.True(consumer.Consume(out message, TimeSpan.FromSeconds(30)));
+                Assert.True(consumer.Consume(out message, TimeSpan.FromSeconds(30)));
+                Assert.True(consumer.Consume(out message, TimeSpan.FromSeconds(30)));
                 consumer.Seek(dr.TopicPartitionOffset);
 
-                record = consumer.Consume(TimeSpan.FromSeconds(30));
-                Assert.NotNull(record.Message);
-                Assert.Equal(checkValue, record.Message.Value);
+                Assert.True(consumer.Consume(out message, TimeSpan.FromSeconds(30)));
+                Assert.Equal(checkValue, message.Value);
             }
-
-            Assert.Equal(0, Library.HandleCount);
-            LogToFile("end   Consumer_Seek");
         }
 
     }

@@ -28,10 +28,6 @@ namespace Confluent.SchemaRegistry
     /// </summary>
     public class CachedSchemaRegistryClient : ISchemaRegistryClient, IDisposable
     {
-        // note: these proeprty names are also specified in Confluent.Kafka.ConfigPropertyNames,
-        // which acts as a central location where all config properties are documented. However,
-        // Confluent.SchemaRegistry doesn't depend on Confluent.Kafka, so these are redefined here.
-        // If these change, they should be kept in-sync in the two places.
         private const string SchemaRegistryUrlPropertyName = "schema.registry.url";
         private const string SchemaRegistryConnectionTimeoutMsPropertyName = "schema.registry.connection.timeout.ms";
         private const string SchemaRegistryMaxCachedSchemasPropertyName = "schema.registry.max.cached.schemas";
@@ -53,10 +49,7 @@ namespace Confluent.SchemaRegistry
         /// </summary>
         public const int DefaultMaxCachedSchemas = 1000;
 
-
-        /// <summary>
-        ///     Refer to <see cref="Confluent.SchemaRegistry.ISchemaRegistryClient.MaxCachedSchemas" />
-        /// </summary>
+        /// <include file='include_docs.xml' path='API.Member[@name="ISchemaRegistryClient_MaxCachedSchemas"]/*' />
         public int MaxCachedSchemas
             => identityMapCapacity;
 
@@ -126,10 +119,7 @@ namespace Confluent.SchemaRegistry
             return false;
         }
 
-
-        /// <summary>
-        ///     Refer to <see cref="Confluent.SchemaRegistry.ISchemaRegistryClient.GetSchemaIdAsync(string, string)" />
-        /// </summary>
+        /// <include file='include_docs.xml' path='API/Member[@name="ISchemaRegistryClient_GetSchemaIdAsync"]/*' />
         public Task<int> GetSchemaIdAsync(string subject, string schema)
         {
             lock (cacheLock)
@@ -157,10 +147,7 @@ namespace Confluent.SchemaRegistry
             }
         }
 
-
-        /// <summary>
-        ///     Refer to <see cref="Confluent.SchemaRegistry.ISchemaRegistryClient.RegisterSchemaAsync(string, string)" />
-        /// </summary>
+        /// <include file='include_docs.xml' path='API/Member[@name="ISchemaRegistryClient_RegisterSchemaAsync"]/*' />
         public Task<int> RegisterSchemaAsync(string subject, string schema)
         {
             lock (cacheLock)
@@ -188,10 +175,7 @@ namespace Confluent.SchemaRegistry
             }
         }
 
-
-        /// <summary>
-        ///     Refer to <see cref="Confluent.SchemaRegistry.ISchemaRegistryClient.GetSchemaAsync(int)" />
-        /// </summary>
+        /// <include file='include_docs.xml' path='API/Member[@name="ISchemaRegistryClient_GetSchemaAsync"]/*' />
         public Task<string> GetSchemaAsync(int id)
         {
             lock (cacheLock)
@@ -208,10 +192,7 @@ namespace Confluent.SchemaRegistry
             }
         }
 
-
-        /// <summary>
-        ///     Refer to <see cref="Confluent.SchemaRegistry.ISchemaRegistryClient.GetSchemaAsync(string, int)" />
-        /// </summary>
+        /// <include file='include_docs.xml' path='API/Member[@name="ISchemaRegistryClient_GetSchemaAsyncSubjectVersion"]/*' />
         public Task<string> GetSchemaAsync(string subject, int version)
         {
             lock (cacheLock)
@@ -236,67 +217,30 @@ namespace Confluent.SchemaRegistry
             }
         }
 
-
-        /// <summary>
-        ///     Refer to <see cref="Confluent.SchemaRegistry.ISchemaRegistryClient.GetLatestSchemaAsync(string)" />
-        /// </summary>
+        /// <include file='include_docs.xml' path='API/Member[@name="ISchemaRegistryClient_GetLatestSchemaAsync"]/*' />
         public async Task<Schema> GetLatestSchemaAsync(string subject)
-            => await restService.GetLatestSchemaAsync(subject).ConfigureAwait(continueOnCapturedContext: false);
+            => await restService.GetLatestSchemaAsync(subject).ConfigureAwait(false);
 
-
-
-        /// <summary>
-        ///     Refer to <see cref="Confluent.SchemaRegistry.ISchemaRegistryClient.GetAllSubjectsAsync" />
-        /// </summary>
+        /// <include file='include_docs.xml' path='API/Member[@name="ISchemaRegistryClient_GetAllSubjectsAsync"]/*' />
         public Task<List<string>> GetAllSubjectsAsync()
             => restService.GetSubjectsAsync();
 
-
-        /// <summary>
-        ///     Refer to <see cref="Confluent.SchemaRegistry.ISchemaRegistryClient.IsCompatibleAsync(string, string)" />
-        /// </summary>
+        /// <include file='include_docs.xml' path='API/Member[@name="ISchemaRegistryClient_IsCompatibleAsync"]/*' />
         public async Task<bool> IsCompatibleAsync(string subject, string schema)
-            => await restService.TestLatestCompatibilityAsync(subject, schema).ConfigureAwait(continueOnCapturedContext: false);
+            => await restService.TestLatestCompatibilityAsync(subject, schema).ConfigureAwait(false);
 
-
-        /// <summary>
-        ///     Refer to <see cref="Confluent.SchemaRegistry.ISchemaRegistryClient.ConstructKeySubjectName(string)" />
-        /// </summary>
+        /// <include file='include_docs.xml' path='API/Member[@name="ISchemaRegistryClient_ConstructKeySubjectName"]/*' />
         public string ConstructKeySubjectName(string topic)
             => $"{topic}-key";
 
-
-        /// <summary>
-        ///     Refer to <see cref="Confluent.SchemaRegistry.ISchemaRegistryClient.ConstructValueSubjectName(string)" />
-        /// </summary>
+        /// <include file='include_docs.xml' path='API/Member[@name="ISchemaRegistryClient_ConstructValueSubjectName"]/*' />
         public string ConstructValueSubjectName(string topic)
             => $"{topic}-value";
-
 
         /// <summary>
         ///     Releases unmanaged resources owned by this CachedSchemaRegistryClient instance.
         /// </summary>
         public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-
-        /// <summary>
-        ///     Releases the unmanaged resources used by this object
-        ///     and optionally disposes the managed resources.
-        /// </summary>
-        /// <param name="disposing">
-        ///     true to release both managed and unmanaged resources;
-        ///     false to release only unmanaged resources.
-        /// </param>
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                restService.Dispose();
-            }
-        }
+            => restService.Dispose();
     }
 }

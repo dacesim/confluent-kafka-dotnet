@@ -58,46 +58,40 @@ namespace Confluent.Kafka.Avro.IntegrationTests
                     favorite_number = 107,
                     favorite_color = "orange"
                 };
-                producer.ProduceAsync(topic, new Message<string, User> { Key = user.name, Value = user });
+                producer.ProduceAsync(topic, user.name, user);
                 Assert.Equal(0, producer.Flush(TimeSpan.FromSeconds(10)));
             }
 
             using (var consumer = new Consumer<User, User>(consumerConfig, new AvroDeserializer<User>(), new AvroDeserializer<User>()))
             {
-                consumer.Assign(new List<TopicPartitionOffset> { new TopicPartitionOffset(topic, 0, 0) });
-
                 bool hadError = false;
-                try
+                consumer.OnConsumeError += (_, m) =>
                 {
-                    consumer.Consume(TimeSpan.FromSeconds(10));
-                }
-                catch (ConsumeException e)
-                {
-                    if (e.Error.Code == ErrorCode.Local_KeyDeserialization)
+                    if (m.Error.Code == ErrorCode.Local_KeyDeserialization)
                     {
                         hadError = true;
                     }
-                }
+                };
+
+                consumer.Assign(new List<TopicPartitionOffset> { new TopicPartitionOffset(topic, 0, 0) });
+                consumer.Consume(out Message<User, User> message, TimeSpan.FromSeconds(10));
 
                 Assert.True(hadError);
             }
 
             using (var consumer = new Consumer<string, string>(consumerConfig, new AvroDeserializer<string>(), new AvroDeserializer<string>()))
             {
-                consumer.Assign(new List<TopicPartitionOffset> { new TopicPartitionOffset(topic, 0, 0) });
-
                 bool hadError = false;
-                try
+                consumer.OnConsumeError += (_, m) =>
                 {
-                    consumer.Consume(TimeSpan.FromSeconds(10));
-                }
-                catch (ConsumeException e)
-                {
-                    if (e.Error.Code == ErrorCode.Local_ValueDeserialization)
+                    if (m.Error.Code == ErrorCode.Local_ValueDeserialization)
                     {
                         hadError = true;
                     }
-                }
+                };
+
+                consumer.Assign(new List<TopicPartitionOffset> { new TopicPartitionOffset(topic, 0, 0) });
+                consumer.Consume(out Message<string, string> message, TimeSpan.FromSeconds(10));
 
                 Assert.True(hadError);
             }

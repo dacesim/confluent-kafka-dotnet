@@ -34,20 +34,15 @@ namespace Confluent.Kafka.Serialization
         /// <param name="topic">
         ///     The topic associated with the data (ignored by this deserializer).
         /// </param>
-        /// <param name="isNull">
-        ///     True if the data is null, false otherwise.
-        /// </param>
         /// <returns>
         ///     null
         /// </returns>
-        public Ignore Deserialize(string topic, ReadOnlySpan<byte> data, bool isNull)
+        public Ignore Deserialize(string topic, byte[] data)
         {
             return null;
         }
 
-        /// <summary>
-        ///     Refer to <see cref="Confluent.Kafka.Serialization.IDeserializer{T}.Configure(IEnumerable{KeyValuePair{string, object}}, bool)" />
-        /// </summary>
+        /// <include file='../include_docs.xml' path='API/Member[@name="IDeserializer_Configure"]/*' />
         public IEnumerable<KeyValuePair<string, object>> Configure(IEnumerable<KeyValuePair<string, object>> config, bool isKey)
             => config;
 
