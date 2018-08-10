@@ -336,8 +336,8 @@ namespace Confluent.Kafka.Impl
                         dllDirectory = Path.Combine(
                             baseDirectory,
                             is64
-                                ? @"runtimes\win7-x64\native"
-                                : @"runtimes\win7-x86\native");
+                                ? @"runtimes\win-x64\native"
+                                : @"runtimes\win-x86\native");
                         path = Path.Combine(dllDirectory, "librdkafka.dll");
                     }
 
@@ -347,13 +347,6 @@ namespace Confluent.Kafka.Impl
                             baseDirectory,
                             is64 ? "x64" : "x86");
                         path = Path.Combine(dllDirectory, "librdkafka.dll");
-                    }
-
-                    //As librdkafka DLLs getting dumped into bin/debug folder
-                    //in some cases, an attempt to get them from baseDirectory
-                    if (!File.Exists(path))
-                    {
-                        path = Path.Combine(baseDirectory, "librdkafka.dll");
                     }
                 }
 

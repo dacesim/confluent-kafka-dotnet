@@ -34,8 +34,8 @@ namespace Confluent.Kafka
     /// </summary>
     public class Consumer<TKey, TValue> : IConsumer<TKey, TValue>
     {
-        private bool isDisposed = false;
-        private object isDisposedLockObj = new object();
+        private bool disposeHasBeenCalled = false;
+        private object disposeHasBeenCalledLockObj = new object();
 
 
         private readonly bool enableHeaderMarshaling = true;
@@ -52,14 +52,16 @@ namespace Confluent.Kafka
         private readonly Librdkafka.ErrorDelegate errorDelegate;
         private void ErrorCallback(IntPtr rk, ErrorCode err, string reason, IntPtr opaque)
         {
-            if (kafkaHandle.IsDestroyed) { return; }
+            // Ensure registered handlers are never called as a side-effect of Dispose/Finalize (prevents deadlocks in common scenarios).
+            if (kafkaHandle.IsClosed) { return; }
             OnError?.Invoke(this, new Error(err, reason));
         }
 
         private readonly Librdkafka.StatsDelegate statsDelegate;
         private int StatsCallback(IntPtr rk, IntPtr json, UIntPtr json_len, IntPtr opaque)
         {
-            if (kafkaHandle.IsDestroyed) { return 0; }
+            // Ensure registered handlers are never called as a side-effect of Dispose/Finalize (prevents deadlocks in common scenarios).
+            if (kafkaHandle.IsClosed) { return 0; }
 
             OnStatistics?.Invoke(this, Util.Marshal.PtrToStringUTF8(json));
             return 0; // instruct librdkafka to immediately free the json ptr.
@@ -70,8 +72,9 @@ namespace Confluent.Kafka
         private readonly Librdkafka.LogDelegate logCallbackDelegate;
         private void LogCallback(IntPtr rk, SyslogLevel level, string fac, string buf)
         {
-            // note: the log delegate should never make use of the client instance,
-            // so checking if the kafkaHandle is destroyed is not necessary here.
+            // Ensure registered handlers are never called as a side-effect of Dispose/Finalize (prevents deadlocks in common scenarios).
+            // kafkaHandle can be null if the callback is during construction (in that case the delegate should be called).
+            if (kafkaHandle != null && kafkaHandle.IsClosed) { return; }
 
             var name = Util.Marshal.PtrToStringUTF8(Librdkafka.name(rk));
 
@@ -95,9 +98,17 @@ namespace Confluent.Kafka
             IntPtr partitions,
             IntPtr opaque)
         {
-            if (kafkaHandle.IsDestroyed) { return; }
-
             var partitionList = SafeKafkaHandle.GetTopicPartitionOffsetErrorList(partitions).Select(p => p.TopicPartition).ToList();
+
+            // Ensure registered handlers are never called as a side-effect of Dispose/Finalize (prevents deadlocks in common scenarios).
+            if (kafkaHandle.IsClosed)
+            { 
+                // The RebalanceCallback should actually never be invoked as a side effect of Dispose,
+                // but if for some reason flow of execution gets here, something is badly wrong - 
+                // a closed librdkafka handle is also expecting an assign call ... 
+                throw new Exception("unexpected rebalance callback when kafkaHandle disposed");
+            }
+
             if (err == ErrorCode.Local_AssignPartitions)
             {
                 var handler = OnPartitionAssignmentReceived;
@@ -110,7 +121,7 @@ namespace Confluent.Kafka
                     Assign(partitionList.Select(p => new TopicPartitionOffset(p, Offset.Invalid)));
                 }
             }
-            if (err == ErrorCode.Local_RevokePartitions)
+            else if (err == ErrorCode.Local_RevokePartitions)
             {
                 var handler = OnPartitionAssignmentRevoked;
                 if (handler != null && handler.GetInvocationList().Length > 0)
@@ -131,7 +142,8 @@ namespace Confluent.Kafka
             IntPtr offsets,
             IntPtr opaque)
         {
-            if (kafkaHandle.IsDestroyed) { return; }
+            // Ensure registered handlers are never called as a side-effect of Dispose/Finalize (prevents deadlocks in common scenarios).
+            if (kafkaHandle.IsClosed) { return; }
 
             OnOffsetsCommitted?.Invoke(this, new CommittedOffsets(
                 SafeKafkaHandle.GetTopicPartitionOffsetErrorList(offsets),
@@ -272,7 +284,7 @@ namespace Confluent.Kafka
             Librdkafka.conf_set_log_cb(configPtr, logCallbackDelegate);
             Librdkafka.conf_set_stats_cb(configPtr, statsDelegate);
 
-            this.kafkaHandle = SafeKafkaHandle.Create(RdKafkaType.Consumer, configPtr);
+            this.kafkaHandle = SafeKafkaHandle.Create(RdKafkaType.Consumer, configPtr, this);
             configHandle.SetHandleAsInvalid(); // config object is no longer useable.
 
             var pollSetConsumerError = kafkaHandle.PollSetConsumer();
@@ -1059,7 +1071,8 @@ namespace Confluent.Kafka
         ///     <see cref="Confluent.Kafka.Consumer{TKey, TValue}.Close" /> instead
         ///     of <see cref="Confluent.Kafka.Consumer{TKey, TValue}.Dispose()" />
         ///     (or just before) to ensure a timely consumer-group rebalance. If you
-        ///     do not call <see cref="Confluent.Kafka.Consumer{TKey, TValue}.Close" />,
+        ///     do not call <see cref="Confluent.Kafka.Consumer{TKey, TValue}.Close" />
+        ///     or <see cref="Confluent.Kafka.Consumer{TKey, TValue}.Unsubscribe" />,
         ///     the group will rebalance after a timeout specified by the broker
         ///     config property `group.max.session.timeout.ms`. Note: the
         ///     <see cref="Confluent.Kafka.Consumer{TKey, TValue}.OnPartitionAssignmentRevoked" />
@@ -1076,6 +1089,9 @@ namespace Confluent.Kafka
         /// </exception>
         public void Close()
         {
+            // commits offsets and unsubscribes.
+            kafkaHandle.ConsumerClose();
+
             Dispose(true);
             GC.SuppressFinalize(this);
         }
@@ -1084,9 +1100,13 @@ namespace Confluent.Kafka
         /// <summary>
         ///     [Desired functionality, refer to remarks for actual current 
         ///     behavior]: Releases all resources used by this Consumer without
-        ///     alerting the group coordinator that the consumer is exiting
-        ///     the group. The group will rebalance after a timeout specified
-        ///     by the broker config property `group.max.session.timeout.ms`.
+        ///     committing offsets and without alerting the group coordinator
+        ///     that the consumer is exiting the group. The group will 
+        ///     rebalance after a timeout specified by the broker config
+        ///     property `group.max.session.timeout.ms`. You should commit
+        ///     offsets / unsubscribe from the group before calling this
+        ///     method (typically by calling 
+        ///     <see cref="Confluent.Kafka.Consumer{TKey, TValue}.Close()" />).
         /// </summary>
         /// <remarks>
         ///     This method is currently (a) a blocking operation and (b) will 
@@ -1113,10 +1133,11 @@ namespace Confluent.Kafka
         /// </param>
         protected virtual void Dispose(bool disposing)
         {
-            lock (isDisposedLockObj)
+            // Calling Dispose a second or subsequent time should be a no-op.
+            lock (disposeHasBeenCalledLockObj)
             { 
-                if (isDisposed) { return; }
-                isDisposed = true;
+                if (disposeHasBeenCalled) { return; }
+                disposeHasBeenCalled = true;
             }
 
             if (disposing)
@@ -1124,8 +1145,11 @@ namespace Confluent.Kafka
                 KeyDeserializer?.Dispose();
                 ValueDeserializer?.Dispose();
 
-                // consumers always own their own handles.
-                kafkaHandle.ConsumerClose();
+                // calls to rd_kafka_destroy may result in callbacks
+                // as a side-effect. however the callbacks this class
+                // registers with librdkafka ensure that any registered
+                // events are not called if disposeHadBeenCalled is true.
+                // this avoids deadlocks in common scenarios.
                 kafkaHandle.Dispose();
             }
         }

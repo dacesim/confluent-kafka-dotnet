@@ -33,6 +33,8 @@ namespace Confluent.Kafka.IntegrationTests
         [Theory, MemberData(nameof(KafkaParameters))]
         public async static void Producer_OptimizeDeliveryReports(string bootstrapServers, string singlePartitionTopic, string partitionedTopic)
         {
+            LogToFile("start Producer_OptimizeDeliveryReports");
+
             byte[] TestKey = new byte[] { 1, 2, 3, 4 };
             byte[] TestValue = new byte[] { 5, 6, 7, 8 };
 
@@ -62,6 +64,9 @@ namespace Confluent.Kafka.IntegrationTests
                 Assert.Null(dr.Key);
                 Assert.Null(dr.Headers);
             }
+
+            Assert.Equal(0, Library.HandleCount);
+            LogToFile("end   Producer_OptimizeDeliveryReports");
         }
     }
 }

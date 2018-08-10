@@ -30,21 +30,19 @@ namespace Confluent.Kafka.Impl
         MSG_F_BLOCK = 4
     }
 
-    /// <remarks>
-    ///     TODO: remove when get_metadata works with string for only_topic
-    /// </remarks>
     internal sealed class SafeTopicHandle : SafeHandleZeroIsInvalid
     {
         const int RD_KAFKA_PARTITION_UA = -1;
 
         internal SafeKafkaHandle kafkaHandle;
 
-        private SafeTopicHandle() : base("kafka topic") { }
+        public SafeTopicHandle() : base("kafka topic") { }
 
         protected override bool ReleaseHandle()
         {
             Librdkafka.topic_destroy(handle);
-            // See SafeKafkaHandle.Topic
+            // This corresponds to the DangerousAddRef call when
+            // the TopicHandle was created.
             kafkaHandle.DangerousRelease();
             return true;
         }
