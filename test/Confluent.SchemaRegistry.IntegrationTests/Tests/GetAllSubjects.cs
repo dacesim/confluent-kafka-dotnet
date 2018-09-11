@@ -24,7 +24,7 @@ namespace Confluent.SchemaRegistry.IntegrationTests
     public static partial class Tests
     {
         [Theory, MemberData(nameof(SchemaRegistryParameters))]
-        public static void GetAllSubjects(Config config)
+        public static void GetAllSubjects(string server)
         {
             var topicName = Guid.NewGuid().ToString();
 
@@ -33,7 +33,7 @@ namespace Confluent.SchemaRegistry.IntegrationTests
                 "\",\"fields\":[{\"name\":\"name\",\"type\":\"string\"},{\"name\":\"favorite_number\",\"type\":[\"i" +
                 "nt\",\"null\"]},{\"name\":\"favorite_color\",\"type\":[\"string\",\"null\"]}]}";
 
-            var sr = new CachedSchemaRegistryClient(new Dictionary<string, object> { { "schema.registry.url", config.Server } });
+            var sr = new CachedSchemaRegistryClient(new SchemaRegistryConfig { SchemaRegistryUrl = server });
 
             var subjectsBefore = sr.GetAllSubjectsAsync().Result;
 

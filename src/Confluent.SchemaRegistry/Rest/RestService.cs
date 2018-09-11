@@ -19,7 +19,6 @@ using System.Net;
 using System.Linq;
 using System.Net.Http;
 using System;
-using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
@@ -47,25 +46,16 @@ namespace Confluent.SchemaRegistry
         /// </summary>
         private readonly List<HttpClient> clients;
 
-
+        
         /// <summary>
         ///     Initializes a new instance of the RestService class.
         /// </summary>
-        public RestService(string schemaRegistryUrl, int timeoutMs, string username, string password)
+        public RestService(string schemaRegistryUrl, int timeoutMs)
         { 
-            var authorizationHeader = username != null && password != null 
-                ? new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{username}:{password}")))
-                : null;
-
             this.clients = schemaRegistryUrl
                 .Split(',')
                 .Select(uri => uri.StartsWith("http", StringComparison.Ordinal) ? uri : "http://" + uri) // need http or https - use http if not present.
-                .Select(uri => 
-                    {
-                        var client = new HttpClient() { BaseAddress = new Uri(uri, UriKind.Absolute), Timeout = TimeSpan.FromMilliseconds(timeoutMs) };
-                        if (authorizationHeader != null) { client.DefaultRequestHeaders.Authorization = authorizationHeader; }
-                        return client;
-                    })
+                .Select(uri => new HttpClient() { BaseAddress = new Uri(uri, UriKind.Absolute), Timeout = TimeSpan.FromMilliseconds(timeoutMs) })
                 .ToList();
         }
 
@@ -93,8 +83,7 @@ namespace Confluent.SchemaRegistry
 
             int loopIndex = startClientIndex;
             int clientIndex = -1; // prevent uninitialized variable compiler error.
-            bool finished = false;
-            for (; loopIndex < clients.Count + startClientIndex && !finished; ++loopIndex)
+            for (; loopIndex < clients.Count + startClientIndex; ++loopIndex)
             {
                 clientIndex = loopIndex % clients.Count;
 
@@ -121,22 +110,9 @@ namespace Confluent.SchemaRegistry
                     // 4xx errors with valid SR error message as content should not be retried (these are conclusive).
                     if ((int)response.StatusCode >= 400 && (int)response.StatusCode < 500)
                     {
-                        try
-                        {
-                            JObject errorObject = null;
-                            errorObject = JObject.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(continueOnCapturedContext: false));
-                            message = errorObject.Value<string>("message");
-                            errorCode = errorObject.Value<int>("error_code");
-                        }
-                        catch (Exception)
-                        {
-                            // consider an unauthorized response from any server to be conclusive.
-                            if (response.StatusCode == HttpStatusCode.Unauthorized)
-                            {
-                                finished = true;
-                                throw new HttpRequestException($"Unauthorized");
-                            }
-                        }
+                        var errorObject = JObject.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(continueOnCapturedContext: false));
+                        message = errorObject.Value<string>("message");
+                        errorCode = errorObject.Value<int>("error_code");
                         throw new SchemaRegistryException(message, response.StatusCode, errorCode);
                     }
 
@@ -161,9 +137,6 @@ namespace Confluent.SchemaRegistry
                 }
                 catch (HttpRequestException e)
                 {
-                    // don't retry error responses originating from Schema Registry.
-                    if (e is SchemaRegistryException) { throw; }
-
                     if (!firstError)
                     {
                         aggregatedErrorMessage += "; ";
