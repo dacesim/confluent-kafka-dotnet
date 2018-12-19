@@ -16,9 +16,6 @@
 //
 // Refer to LICENSE for more information.
 
-using System;
-
-
 namespace Confluent.Kafka
 {
     /// <summary>
@@ -33,7 +30,7 @@ namespace Confluent.Kafka
         /// <param name="error">
         ///     The error object to initialize from.
         /// </param>
-        public Error(Error error) : this(error.Code, error.Reason, error.IsFatal) { }
+        public Error(Error error) : this(error.Code, error.Reason) {}
 
         /// <summary>
         ///     Initialize a new Error instance from a particular
@@ -50,35 +47,6 @@ namespace Confluent.Kafka
         {
             Code = code;
             reason = null;
-            IsFatal = code == ErrorCode.Local_Fatal;
-        }
-
-        /// <summary>
-        ///     Initialize a new Error instance.
-        /// </summary>
-        /// <param name="code">
-        ///     The error code.
-        /// </param>
-        /// <param name="reason">
-        ///     The error reason. If null, this will be a static value
-        ///     associated with the error.
-        /// </param>
-        /// <param name="isFatal">
-        ///     Whether or not the error is fatal.
-        /// </param>
-        /// <exception cref="ArgumentException">
-        ///     
-        /// </exception>
-        public Error(ErrorCode code, string reason, bool isFatal)
-        {
-            if (code == ErrorCode.Local_Fatal && !isFatal)
-            {
-                throw new ArgumentException("isFatal parameter must be 'true' when code is 'Local_Fatal'.");
-            }
-
-            Code = code;
-            this.reason = reason;
-            IsFatal = isFatal;
         }
 
         /// <summary>
@@ -98,18 +66,12 @@ namespace Confluent.Kafka
         {
             Code = code;
             this.reason = reason;
-            IsFatal = code == ErrorCode.Local_Fatal;
         }
 
         /// <summary>
         ///     Gets the <see cref="ErrorCode"/> associated with this Error.
         /// </summary>
         public ErrorCode Code { get; }
-
-        /// <summary>
-        ///     Whether or not the error is fatal.
-        /// </summary>
-        public bool IsFatal { get; }
 
         private readonly string reason;
 
@@ -173,11 +135,7 @@ namespace Confluent.Kafka
                 return false;
             }
 
-            // Note: in practice, if the Code's are equal, the IsFatal's will be equal.
-            // However, the logic for arranging this is outside the responsibility of 
-            // this class (unfortunately) and this class needs to be general enough to
-            // deal with the possibility that this might not be the case.
-            return (((Error)obj).Code == Code) && (((Error)obj).IsFatal == IsFatal);
+            return ((Error)obj).Code == Code;
         }
 
         /// <summary>

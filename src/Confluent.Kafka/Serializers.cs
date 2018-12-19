@@ -1,19 +1,3 @@
-// Copyright 2018 Confluent Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// Refer to LICENSE for more information.
-
 using System;
 using System.Text;
 
@@ -21,163 +5,192 @@ using System.Text;
 namespace Confluent.Kafka
 {
     /// <summary>
-    ///     Serializers for use with <see cref="Producer{TKey,TValue}" />.
+    ///     Serializers that can be used with <see cref="Confluent.Kafka.Producer{TKey, TValue}" />.
     /// </summary>
     public static class Serializers
     {
         /// <summary>
-        ///     String (UTF8) serializer.
+        ///     Encodes a string value in a byte array.
         /// </summary>
-        public static ISerializer<string> Utf8 = new Utf8Serializer();
-        
-        private class Utf8Serializer : ISerializer<string>
+        public static Serializer<string> UTF8 = (topic, data) =>
         {
-            public byte[] Serialize(string data, bool isKey, MessageMetadata messageMetadata, TopicPartition destination)
+            if (data == null)
             {
-                if (data == null)
-                {
-                    return null;
-                }
+                return null;
+            }
 
-                return Encoding.UTF8.GetBytes(data);
+            return Encoding.UTF8.GetBytes(data);
+        };
+
+        /// <summary>
+        ///     Encodes a Null value to null.
+        /// </summary>
+        public static Serializer<Null> Null = (topic, data) => null;
+
+        /// <summary>
+        ///     Serializes the specified <see cref="System.Int64"/> value to a byte array of length 8. Byte order is big endian (network byte order).
+        /// </summary>
+        /// <param name="data">
+        ///     The <see cref="System.Int64"/> value to serialize.
+        /// </param>
+        /// <param name="topic">
+        ///     The topic associated with the data (ignored by this serializer).
+        /// </param>
+        /// <returns>
+        ///     The <see cref="System.Int64"/> value <paramref name="data" /> encoded as a byte array of length 8 (network byte order).
+        /// </returns>
+        public static byte[] Long(string topic, long data)
+        {
+            var result = new byte[8];
+            result[0] = (byte)(data >> 56);
+            result[1] = (byte)(data >> 48);
+            result[2] = (byte)(data >> 40);
+            result[3] = (byte)(data >> 32);
+            result[4] = (byte)(data >> 24);
+            result[5] = (byte)(data >> 16);
+            result[6] = (byte)(data >> 8);
+            result[7] = (byte)data;
+            return result;
+        }
+
+        /// <summary>
+        ///     Serializes the specified <see cref="System.Int32"/> value to a byte array of length 4. Byte order is big endian (network byte order).
+        /// </summary>
+        /// <param name="data">
+        ///     The <see cref="System.Int32"/> value to serialize.
+        /// </param>
+        /// <param name="topic">
+        ///     The topic associated with the data (ignored by this serializer).
+        /// </param>
+        /// <returns>
+        ///     The <see cref="System.Int32"/> value <paramref name="data" /> encoded as a byte array of length 4 (network byte order).
+        /// </returns>
+        public static byte[] Int32(string topic, int data)
+        {
+            var result = new byte[4]; // int is always 32 bits on .NET.
+            // network byte order -> big endian -> most significant byte in the smallest address.
+            // Note: At the IL level, the conv.u1 operator is used to cast int to byte which truncates
+            // the high order bits if overflow occurs.
+            // https://msdn.microsoft.com/en-us/library/system.reflection.emit.opcodes.conv_u1.aspx
+            result[0] = (byte)(data >> 24);
+            result[1] = (byte)(data >> 16); // & 0xff;
+            result[2] = (byte)(data >> 8); // & 0xff;
+            result[3] = (byte)data; // & 0xff;
+            return result;
+        }
+
+        /// <summary>
+        ///     Serializes the specified System.Single value to a byte array of length 4. Byte order is big endian (network byte order).
+        /// </summary>
+        /// <param name="topic">
+        ///     The topic associated with the data (ignored by this serializer).
+        /// </param>
+        /// <param name="data">
+        ///     The System.Single value to serialize.
+        /// </param>
+        /// <returns>
+        ///     The System.Single value <paramref name="data" /> encoded as a byte array of length 4 (network byte order).
+        /// </returns>
+        public static byte[] Float(string topic, float data)
+        {
+            if (BitConverter.IsLittleEndian)
+            {
+                unsafe
+                {
+                    byte[] result = new byte[4];
+                    byte* p = (byte*)(&data);
+                    result[3] = *p++;
+                    result[2] = *p++;
+                    result[1] = *p++;
+                    result[0] = *p++;
+                    return result;
+                }
+            }
+            else
+            {
+                return BitConverter.GetBytes(data);
             }
         }
 
-
         /// <summary>
-        ///     Null serializer.
+        ///     Serializes the specified System.Double value to a byte array of length 8. Byte order is big endian (network byte order).
         /// </summary>
-        public static ISerializer<Null> Null = new NullSerializer();
-
-        private class NullSerializer : ISerializer<Null>
+        /// <param name="topic">
+        ///     The topic associated with the data (ignored by this serializer).
+        /// </param>
+        /// <param name="data">
+        ///     The System.Double value to serialize.
+        /// </param>
+        /// <returns>
+        ///     The System.Double value <paramref name="data" /> encoded as a byte array of length 4 (network byte order).
+        /// </returns>
+        public static byte[] Double(string topic, double data)
         {
-            public byte[] Serialize(Null data, bool isKey, MessageMetadata messageMetadata, TopicPartition destination)
-                => null;
-        }
-
-
-        /// <summary>
-        ///     System.Int64 (big endian, network byte order) serializer.
-        /// </summary>
-        public static ISerializer<long> Int64 = new Int64Serializer();
-
-        private class Int64Serializer : ISerializer<long>
-        {
-            public byte[] Serialize(long data, bool isKey, MessageMetadata messageMetadata, TopicPartition destination)
+            if (BitConverter.IsLittleEndian)
             {
-                var result = new byte[8];
-                result[0] = (byte)(data >> 56);
-                result[1] = (byte)(data >> 48);
-                result[2] = (byte)(data >> 40);
-                result[3] = (byte)(data >> 32);
-                result[4] = (byte)(data >> 24);
-                result[5] = (byte)(data >> 16);
-                result[6] = (byte)(data >> 8);
-                result[7] = (byte)data;
-                return result;
+                unsafe
+                {
+                    byte[] result = new byte[8];
+                    byte* p = (byte*)(&data);
+                    result[7] = *p++;
+                    result[6] = *p++;
+                    result[5] = *p++;
+                    result[4] = *p++;
+                    result[3] = *p++;
+                    result[2] = *p++;
+                    result[1] = *p++;
+                    result[0] = *p++;
+                    return result;
+                }
+            }
+            else
+            {
+                return BitConverter.GetBytes(data);
             }
         }
 
+        /// <summary>
+        ///     Serializes the specified System.Byte[] value (or null) to 
+        ///     a byte array. Byte order is original order. 
+        /// </summary>
+        public static Serializer<byte[]> ByteArray = (topic, data) => data;
 
         /// <summary>
-        ///     System.Int32 (big endian, network byte order) serializer.
+        ///     Generators for the standard serializers (simply return the 
+        ///     appropriate serializer regardless of the value of the forKey
+        ///     parameter)
         /// </summary>
-        public static ISerializer<int> Int32 = new Int32Serializer();
-
-        private class Int32Serializer : ISerializer<int>
+        public static class Generators
         {
-            public byte[] Serialize(int data, bool isKey, MessageMetadata messageMetadata, TopicPartition destination)
-            {
-                var result = new byte[4]; // int is always 32 bits on .NET.
-                // network byte order -> big endian -> most significant byte in the smallest address.
-                // Note: At the IL level, the conv.u1 operator is used to cast int to byte which truncates
-                // the high order bits if overflow occurs.
-                // https://msdn.microsoft.com/en-us/library/system.reflection.emit.opcodes.conv_u1.aspx
-                result[0] = (byte)(data >> 24);
-                result[1] = (byte)(data >> 16); // & 0xff;
-                result[2] = (byte)(data >> 8); // & 0xff;
-                result[3] = (byte)data; // & 0xff;
-                return result;
-            }
-        }
+            /// <summary>
+            ///     Generates a UTF8 serializer (invariant on the value of forKey).
+            /// </summary>
+            public static SerializerGenerator<string> UTF8 = (forKey) => Serializers.UTF8;
 
+            /// <summary>
+            ///     Generates a Null serializer (invariant on the value of forKey).
+            /// </summary>
+            public static SerializerGenerator<Null> Null = (forKey) => Serializers.Null;
 
-        /// <summary>
-        ///     System.Single (big endian, network byte order) serializer
-        /// </summary>
-        public static ISerializer<float> Single = new SingleSerializer();
+            /// <summary>
+            ///     Generates a Int32 serializer (invariant on the value of forKey).
+            /// </summary>
+            public static SerializerGenerator<Int32> Int32 = (forKey) => Serializers.Int32;
 
-        private class SingleSerializer : ISerializer<float>
-        {
-            public byte[] Serialize(float data, bool isKey, MessageMetadata messageMetadata, TopicPartition destination)
-            {
-                if (BitConverter.IsLittleEndian)
-                {
-                    unsafe
-                    {
-                        byte[] result = new byte[4];
-                        byte* p = (byte*)(&data);
-                        result[3] = *p++;
-                        result[2] = *p++;
-                        result[1] = *p++;
-                        result[0] = *p++;
-                        return result;
-                    }
-                }
-                else
-                {
-                    return BitConverter.GetBytes(data);
-                }
-            }
-        }
+            /// <summary>
+            ///     Generates a Long serializer (invariant on the value of forKey).
+            /// </summary>
+            public static SerializerGenerator<long> Long = (forKey) => Serializers.Long;
 
+            /// <summary>
+            ///     Generates a Float serializer (invariant on the value of forKey).
+            /// </summary>
+            public static SerializerGenerator<float> Float = (forKey) => Serializers.Float;
 
-        /// <summary>
-        ///     System.Double (big endian, network byte order) serializer
-        /// </summary>
-        public static ISerializer<double> Double = new DoubleSerializer();
-
-        private class DoubleSerializer : ISerializer<double>
-        {
-            public byte[] Serialize(double data, bool isKey, MessageMetadata messageMetadata, TopicPartition destination)
-            {
-                if (BitConverter.IsLittleEndian)
-                {
-                    unsafe
-                    {
-                        byte[] result = new byte[8];
-                        byte* p = (byte*)(&data);
-                        result[7] = *p++;
-                        result[6] = *p++;
-                        result[5] = *p++;
-                        result[4] = *p++;
-                        result[3] = *p++;
-                        result[2] = *p++;
-                        result[1] = *p++;
-                        result[0] = *p++;
-                        return result;
-                    }
-                }
-                else
-                {
-                    return BitConverter.GetBytes(data);
-                }
-            }
-        }
-
-
-        /// <summary>
-        ///     System.Byte[] (nullable) serializer.
-        /// </summary>
-        /// <remarks>
-        ///     Byte order is original order.
-        /// </remarks>
-        public static ISerializer<byte[]> ByteArray = new ByteArraySerializer();
-        
-        private class ByteArraySerializer : ISerializer<byte[]>
-        {
-            public byte[] Serialize(byte[] data, bool isKey, MessageMetadata messageMetadata, TopicPartition destination)
-                => data;
+            /// <summary>
+            ///     Generates a Double serializer (invariant on the value of forKey).
+            /// </summary>
+            public static SerializerGenerator<double> Double = (forKey) => Serializers.Double;
         }
     }
 }
