@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Derived from: rdkafka-dotnet, licensed under the 2-clause BSD License.
-//
 // Refer to LICENSE for more information.
 
 
@@ -27,39 +25,12 @@ namespace Confluent.Kafka
     /// <summary>
     ///     The result of a produce request.
     /// </summary>
-    public class DeliveryReport<TKey, TValue>
+    public class DeliveryReport<TKey, TValue> : DeliveryResult<TKey, TValue>
     {
-        /// <summary>
-        ///     The topic associated with the message.
-        /// </summary>
-        public string Topic { get; set; }
-
-        /// <summary>
-        ///     The partition associated with the message.
-        /// </summary>
-        public Partition Partition { get; set; }
-
-        /// <summary>
-        ///     The partition offset associated with the message.
-        /// </summary>
-        public Offset Offset { get; set; }
-
         /// <summary>
         ///     An error (or NoError) associated with the message.
         /// </summary>
         public Error Error { get; set; }
-
-        /// <summary>
-        ///     The TopicPartition associated with the message.
-        /// </summary>
-        public TopicPartition TopicPartition
-            => new TopicPartition(Topic, Partition);
-
-        /// <summary>
-        ///     The TopicPartitionOffset associated with the message.
-        /// </summary>
-        public TopicPartitionOffset TopicPartitionOffset
-            => new TopicPartitionOffset(Topic, Partition, Offset);
 
         /// <summary>
         ///     The TopicPartitionOffsetError assoicated with the message.
@@ -78,46 +49,5 @@ namespace Confluent.Kafka
                 Error = value.Error;
             }
         }
-
-        /// <summary>
-        ///     The Kafka message.
-        /// </summary>
-        public Message<TKey, TValue> Message { get; set; }
-
-        /// <summary>
-        ///     The Kafka message Key.
-        /// </summary>
-        public TKey Key
-        {
-            get { return Message.Key; }
-            set { Message.Key = value; }
-        }
-
-        /// <summary>
-        ///     The Kafka message Value.
-        /// </summary>
-        public TValue Value
-        {
-            get { return Message.Value; }
-            set { Message.Value = value; }
-        }
-
-        /// <summary>
-        ///     The Kafka message timestamp.
-        /// </summary>
-        public Timestamp Timestamp
-        {
-            get { return Message.Timestamp; }
-            set { Message.Timestamp = value; }
-        }
-
-        /// <summary>
-        ///     The Kafka message headers.
-        /// </summary>
-        public Headers Headers
-        {
-            get { return Message.Headers; }
-            set { Message.Headers = value; }
-        }   
     }
 }

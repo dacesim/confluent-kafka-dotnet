@@ -45,15 +45,16 @@ namespace Confluent.Kafka.Examples.ConsumerExample
                 EnableAutoCommit = false,
                 StatisticsIntervalMs = 5000,
                 SessionTimeoutMs = 6000,
-                AutoOffsetReset = AutoOffsetResetType.Earliest
+                AutoOffsetReset = AutoOffsetResetType.Earliest,
+                EnablePartitionEof = true
             };
 
             const int commitPeriod = 5;
 
-            using (var consumer = new Consumer(config))
+            using (var consumer = new Consumer<Ignore, string>(config))
             {
                 // Note: All event handlers are called on the main .Consume thread.
-                
+
                 // Raised when the consumer has been notified of a new assignment set.
                 // You can use this event to perform actions such as retrieving offsets
                 // from an external source / manually setting start offsets using
@@ -71,9 +72,6 @@ namespace Confluent.Kafka.Examples.ConsumerExample
                 consumer.OnPartitionsRevoked += (_, partitions)
                     => Console.WriteLine($"Revoked partitions: [{string.Join(", ", partitions)}]");
 
-                consumer.OnPartitionEOF += (_, tpo)
-                    => Console.WriteLine($"Reached end of topic {tpo.Topic} partition {tpo.Partition}, next message will be at offset {tpo.Offset}");
-
                 consumer.OnError += (_, e)
                     => Console.WriteLine($"Error: {e.Reason}");
 
@@ -86,7 +84,16 @@ namespace Confluent.Kafka.Examples.ConsumerExample
                 {
                     try
                     {
-                        var consumeResult = consumer.Consume<Ignore, string>(cancellationToken);
+                        var consumeResult = consumer.Consume(cancellationToken);
+
+                        if (consumeResult.IsPartitionEOF)
+                        {
+                            Console.WriteLine(
+                                $"Reached end of topic {consumeResult.Topic}, partition {consumeResult.Partition}.");
+
+                            continue;
+                        }
+
                         Console.WriteLine($"Received message at {consumeResult.TopicPartitionOffset}: {consumeResult.Value}");
 
                         if (consumeResult.Offset % commitPeriod == 0)
@@ -131,21 +138,21 @@ namespace Confluent.Kafka.Examples.ConsumerExample
                 EnableAutoCommit = true
             };
 
-            using (var consumer = new Consumer(config))
+            using (var consumer = new Consumer<Ignore, string>(config))
             {
                 consumer.Assign(topics.Select(topic => new TopicPartitionOffset(topic, 0, Offset.Beginning)).ToList());
 
                 consumer.OnError += (_, e)
                     => Console.WriteLine($"Error: {e.Reason}");
 
-                consumer.OnPartitionEOF += (_, topicPartitionOffset)
-                    => Console.WriteLine($"End of partition: {topicPartitionOffset}");
-
                 while (!cancellationToken.IsCancellationRequested)
                 {
                     try
                     {
-                        var consumeResult = consumer.Consume<Ignore, string>(cancellationToken);
+                        var consumeResult = consumer.Consume(cancellationToken);
+                        // Note: End of partition notification has not been enabled, so
+                        // it is guaranteed that the ConsumeResult instance corresponds
+                        // to a Message, and not a PartitionEOF event.
                         Console.WriteLine($"Received message at {consumeResult.TopicPartitionOffset}: ${consumeResult.Value}");
                     }
                     catch (ConsumeException e)

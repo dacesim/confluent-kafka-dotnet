@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Derived from: rdkafka-dotnet, licensed under the 2-clause BSD License.
-//
 // Refer to LICENSE for more information.
 
 
@@ -69,6 +67,11 @@ namespace Confluent.Kafka
         }
 
         /// <summary>
+        ///     The persistence status of the message
+        /// </summary>
+        public PersistenceStatus PersistenceStatus { get; set; }
+        
+        /// <summary>
         ///     The Kafka message.
         /// </summary>
         public Message<TKey, TValue> Message { get; set; }
@@ -107,6 +110,6 @@ namespace Confluent.Kafka
         {
             get { return Message.Headers; }
             set { Message.Headers = value; }
-        }   
+        }
     }
 }

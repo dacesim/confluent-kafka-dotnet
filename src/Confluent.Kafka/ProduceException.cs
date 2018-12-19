@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Derived from: rdkafka-dotnet, licensed under the 2-clause BSD License.
-//
 // Refer to LICENSE for more information.
 
 using System;
@@ -39,13 +37,13 @@ namespace Confluent.Kafka
         public ProduceException(Error error, DeliveryResult<TKey, TValue> deliveryReport)
             : base(error)
         {
-            DeliveryReport = deliveryReport;
+            DeliveryResult = deliveryReport;
         }
 
         /// <summary>
         ///     The delivery report associated with the produce request.
         /// </summary>
-        public DeliveryResult<TKey, TValue> DeliveryReport { get; }
+        public DeliveryResult<TKey, TValue> DeliveryResult { get; }
     }
 
 

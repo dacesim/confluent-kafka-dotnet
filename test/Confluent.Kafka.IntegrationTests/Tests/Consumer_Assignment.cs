@@ -28,7 +28,7 @@ namespace Confluent.Kafka.IntegrationTests
     public static partial class Tests
     {
         /// <summary>
-        ///     
+        ///     Tests of <see cref="Consumer.Assignment" />
         /// </summary>
         [Theory, MemberData(nameof(KafkaParameters))]
         public static void Consumer_Assignment(string bootstrapServers, string singlePartitionTopic, string partitionedTopic)
@@ -36,7 +36,7 @@ namespace Confluent.Kafka.IntegrationTests
             LogToFile("start Consumer_Assignment");
 
             int N = 2;
-            var firstProduced = Util.ProduceMessages(bootstrapServers, singlePartitionTopic, 1, N);
+            var firstProduced = Util.ProduceNullStringMessages(bootstrapServers, singlePartitionTopic, 1, N);
 
             var consumerConfig = new ConsumerConfig
             {

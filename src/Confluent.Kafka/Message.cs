@@ -20,9 +20,9 @@
 namespace Confluent.Kafka
 {
     /// <summary>
-    ///     Represents a (deserialized) message stored in Kafka.
+    ///     Represents a (deserialized) Kafka message.
     /// </summary>
-    public class Message<TKey, TValue>
+    public class Message<TKey, TValue> : MessageMetadata
     {
         /// <summary>
         ///     Gets the message key value (possibly null).
@@ -33,24 +33,31 @@ namespace Confluent.Kafka
         ///     Gets the message value (possibly null).
         /// </summary>
         public TValue Value { get; set; }
-
-        /// <summary>
-        ///     The message timestamp. The timestamp type must be set to CreateTime. 
-        ///     Specify Timestamp.Default to set the message timestamp to the time
-        ///     of this function call.
-        /// </summary>
-        public Timestamp Timestamp { get; set; }
-
-        /// <summary>
-        ///     The collection of message headers (or null). Specifying null or an 
-        ///      empty list are equivalent. The order of headers is maintained, and
-        ///     duplicate header keys are allowed.
-        /// </summary>
-        public Headers Headers { get; set; }
     }
 
     /// <summary>
-    ///     Represents a message stored in Kafka.
+    ///     Represents a Kafka message.
     /// </summary>
-    public class Message : Message<byte[], byte[]> {}
+    public class Message : Message<byte[], byte[]>
+    {
+        /// <summary>
+        ///     Create a new instance with default property values.
+        /// </summary>
+        public Message() {}
+
+        /// <summary>
+        ///     Create a new instance that exactly mirrors the state of
+        ///     a <see cref="Message{TKey, TValue}" /> instance.
+        /// </summary>
+        /// <param name="message">
+        ///     The <see cref="Message{TKey, TValue}" /> instance to copy.
+        /// </param>
+        public Message(Message<byte[], byte[]> message)
+        {
+            Timestamp = message.Timestamp;
+            Headers = message.Headers;
+            Key = message.Key;
+            Value = message.Value;
+        }
+    }
 }

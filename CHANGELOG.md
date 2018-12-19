@@ -3,19 +3,29 @@
 ## New Features
 
 - Revamped producer and consumer serialization functionality.
-  - Removed generic parameters from `Producer` and `Consumer`.
-  - `Producer` / `Consumer` now provide typed and un-typed `ProduceAsync`, `BeginProduce` and `Consume` method variants.
-  - Invokation of serializers and deserializers is automatic, based on type.
-  - Standard serde delegate types no longer include a `topic` parameter.
-  - Avro serialization/deserializtion functionality is now provided by `AvroProducer` / `AvroConsumer` which derive from `Producer` / `Consumer`.
+  - All producer functionality except the public methods used to produce messages is now provided by `ProducerBase`.
+  - There are two producer classes deriving from `ProducerBase`: `Producer` and `Producer<TKey, TValue>`.
+    - `Producer` is specialized for the case of producing messages with `byte[]` keys and values.
+    - `Producer<TKey, TValue>` provides flexible integration with serialization functionality.
+  - On the consumer side, there are analogous classes: `ConsumerBase`, `Consumer` and `Consumer<TKey, TValue>`.
+  - There are two types of serializer and deserializer: `ISerializer<T>` / `IAsyncSerializer<T>` and `IDeserializer<T>` / `IAsyncDeserializer<T>`.
+    - `ISerializer<T>`/`IDeserializer<T>` are appropriate for most use cases.
+    - `IAsyncSerializer<T>`/`IAsyncDeserializer<T>` are more general, but less performant (they return `Task`s).
+    - The generic producer and consumer can be used with both types of serializer.
+  - Changed the name of `Confluent.Kafka.Avro` to `Confluent.SchemaRegistry.Serdes` (Schema Registry may support other serialization formats in the future).
+  - Added a example demonstrating working with protobuf serialized data.
 - Avro serdes no longer make blocking calls to `ICachedSchemaRegistryClient` - everything is `await`ed.
-- `Producer` and `Consumer` constructors that accept a `Handle` have been removed.
-- References librdkafka.redist [1.0.0-RC2](https://github.com/edenhill/librdkafka/releases/tag/v1.0.0-RC2)
+- References librdkafka.redist [1.0.0-RC4](https://github.com/edenhill/librdkafka/releases/tag/v1.0.0-RC4)
+  - Note: End of partition notification is now disabled by default (enable using the `EnablePartitionEof` config property).
+- Removed `Consumer.OnPartitionEOF` in favor of `ConsumeResult.IsPartitionEOF`.
+- Removed `ErrorEvent` class and added `IsFatal` to `Error` class. 
+  - The `IsFatal` flag is now set appropriately for all errors (previously it was always set to `false`).
+- Added `PersistenceStatus` property to `DeliveryResult`, which provides information on the persitence status of the message.
 
+## Fixes
 
-## Enhancements / Fixes
-
-- Added `Close` method and `OnPartitionEOF` event to `IConsumer` interface.
+- Added `Close` method to `IConsumer` interface.
+- Changed the name of `ProduceException.DeliveryReport` to `ProduceException.DeliveryResult`.
 
 
 # 1.0.0-beta2

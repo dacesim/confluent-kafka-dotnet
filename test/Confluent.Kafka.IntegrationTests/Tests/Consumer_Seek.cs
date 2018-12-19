@@ -45,23 +45,23 @@ namespace Confluent.Kafka.IntegrationTests
             var producerConfig = new ProducerConfig { BootstrapServers = bootstrapServers };
 
             using (var producer = new Producer(producerConfig))
-            using (var consumer = new Consumer(consumerConfig))
+            using (var consumer = new Consumer<Null, string>(consumerConfig))
             {
                 consumer.OnError += (_, e)
                     => Assert.True(false, e.Reason);
 
                 const string checkValue = "check value";
-                var dr = producer.ProduceAsync(singlePartitionTopic, new Message { Value = Serializers.UTF8(checkValue) }).Result;
-                var dr2 = producer.ProduceAsync(singlePartitionTopic, new Message { Value = Serializers.UTF8("second value") }).Result;
-                var dr3 = producer.ProduceAsync(singlePartitionTopic, new Message { Value = Serializers.UTF8("third value") }).Result;
+                var dr = producer.ProduceAsync(singlePartitionTopic, new Message { Value = Serializers.Utf8.Serialize(checkValue, true, null, null) }).Result;
+                var dr2 = producer.ProduceAsync(singlePartitionTopic, new Message { Value = Serializers.Utf8.Serialize("second value", true, null, null) }).Result;
+                var dr3 = producer.ProduceAsync(singlePartitionTopic, new Message { Value = Serializers.Utf8.Serialize("third value", true, null, null) }).Result;
 
                 consumer.Assign(new TopicPartitionOffset[] { new TopicPartitionOffset(singlePartitionTopic, 0, dr.Offset) });
 
-                ConsumeResult<Null, string> record = consumer.Consume<Null, string>(TimeSpan.FromSeconds(10));
+                var record = consumer.Consume(TimeSpan.FromSeconds(10));
                 Assert.NotNull(record.Message);
-                record = consumer.Consume<Null, string>(TimeSpan.FromSeconds(10));
+                record = consumer.Consume(TimeSpan.FromSeconds(10));
                 Assert.NotNull(record.Message);
-                record = consumer.Consume<Null, string>(TimeSpan.FromSeconds(10));
+                record = consumer.Consume(TimeSpan.FromSeconds(10));
                 Assert.NotNull(record.Message);
                 consumer.Seek(dr.TopicPartitionOffset);
 
@@ -69,7 +69,7 @@ namespace Confluent.Kafka.IntegrationTests
                 var pos = consumer.Position(new List<TopicPartition> { dr.TopicPartition }).First();
                 Assert.NotEqual(dr.Offset, pos.Offset);
 
-                record = consumer.Consume<Null, string>(TimeSpan.FromSeconds(10));
+                record = consumer.Consume(TimeSpan.FromSeconds(10));
                 Assert.NotNull(record.Message);
                 Assert.Equal(checkValue, record.Message.Value);
             }
