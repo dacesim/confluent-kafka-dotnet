@@ -28,91 +28,58 @@ namespace Confluent.Kafka.IntegrationTests
     public static partial class Tests
     {
         /// <summary>
-        ///     Ensures that awaiting ProduceAsync does not deadlock and
-        ///     some other basic things.
+        ///     Ensures that awaiting ProduceAsync does not deadlock.
         /// </summary>
         [Theory, MemberData(nameof(KafkaParameters))]
-        public static void Producer_ProduceAsync_Await_Serializing(string bootstrapServers, string singlePartitionTopic, string partitionedTopic)
+        public static void Producer_ProduceAsync_Await(string bootstrapServers, string singlePartitionTopic, string partitionedTopic)
         {
-            LogToFile("start Producer_ProduceAsync_Await_Serializing");
+            LogToFile("start Producer_ProduceAsync_Await");
 
             Func<Task> mthd = async () => 
             {
                 using (var producer = new Producer<Null, string>(new ProducerConfig { BootstrapServers = bootstrapServers }))
                 {
-                    var dr = await producer.ProduceAsync(
-                        singlePartitionTopic,
-                        new Message<Null, string> { Value = "test string" });
-                    Assert.Equal(0, producer.Flush(TimeSpan.FromSeconds(10)));
-                    Assert.True(dr.Offset > 0);
+                    var dr = await producer.ProduceAsync(singlePartitionTopic, new Message<Null, string> { Value = "test string" });
+                    producer.Flush(TimeSpan.FromSeconds(10));
                 }
             };
 
             mthd().Wait();
             
             Assert.Equal(0, Library.HandleCount);
-            LogToFile("end   Producer_ProduceAsync_Await_Serializing");
+            LogToFile("end   Producer_ProduceAsync_Await");
         }
 
-        /// <summary>
-        ///     Ensures that awaiting ProduceAsync does not deadlock and
-        ///     some other basic things (variant 2).
-        /// </summary>
         [Theory, MemberData(nameof(KafkaParameters))]
-        public static async Task Producer_ProduceAsync_Await_NonSerializing(string bootstrapServers, string singlePartitionTopic, string partitionedTopic)
+        public static async Task Producer_ProduceAsync_Await2(string bootstrapServers, string singlePartitionTopic, string partitionedTopic)
         {
-            LogToFile("start Producer_ProduceAsync_Await_NonSerializing");
+            LogToFile("start Producer_ProduceAsync_Await2");
 
-            using (var producer = new Producer(new ProducerConfig { BootstrapServers = bootstrapServers }))
+            using (var producer = new Producer<Null, string>(new ProducerConfig { BootstrapServers = bootstrapServers }))
             {
-                var dr = await producer.ProduceAsync(
-                    singlePartitionTopic,
-                    new Message { Value = Encoding.UTF8.GetBytes("test string") });
-                Assert.True(dr.Offset > 0);
+                var dr = await producer.ProduceAsync(singlePartitionTopic, new Message<Null, string> { Value = "test string" });
             }
 
             Assert.Equal(0, Library.HandleCount);
-            LogToFile("end   Producer_ProduceAsync_Await_NonSerializing");
+            LogToFile("end   Producer_ProduceAsync_Await2");
         }
 
         /// <summary>
-        ///     Ensures that ProduceAsync throws when the DeliveryReport 
-        ///     has an error (produced to non-existant partition).
+        ///     Ensures that ProduceAsync throws when the DeliveryReport has an error (produced to non-existant partition).
         /// </summary>
         [Theory, MemberData(nameof(KafkaParameters))]
-        public static async Task Producer_ProduceAsync_Await_Throws(string bootstrapServers, string singlePartitionTopic, string partitionedTopic)
+        public static async Task Producer_ProduceAsync_Await3(string bootstrapServers, string singlePartitionTopic, string partitionedTopic)
         {
-            LogToFile("start Producer_ProduceAsync_Await_Throws");
+            LogToFile("start Producer_ProduceAsync_Await3");
 
-            using (var producer = new Producer(new ProducerConfig { BootstrapServers = bootstrapServers }))
+            using (var producer = new Producer<Null, string>(new ProducerConfig { BootstrapServers = bootstrapServers }))
             {
-                await Assert.ThrowsAsync<ProduceException>(
-                    async () => 
-                    {
-                        await producer.ProduceAsync(
-                            new TopicPartition(singlePartitionTopic, 42),
-                            new Message { Value = Encoding.UTF8.GetBytes("test string") });
-                        throw new Exception("unexpected exception");
-                    });
+                await Assert.ThrowsAsync<ProduceException<Null, string>>(
+                    async () => await producer.ProduceAsync(new TopicPartition(singlePartitionTopic, 42), new Message<Null, string> { Value = "test string" }));
             }
             
-            // variation 2
-
-            Func<Task> mthd = async () =>
-            {
-                using (var producer = new Producer(new ProducerConfig { BootstrapServers = bootstrapServers }))
-                {
-                    var dr = await producer.ProduceAsync(
-                        new TopicPartition(singlePartitionTopic, 1001),
-                        new Message { Value = Encoding.UTF8.GetBytes("test string") });
-                    throw new Exception("unexpected exception.");
-                }
-            };
-
-            Assert.Throws<AggregateException>(() => { mthd().Wait(); });
-
             Assert.Equal(0, Library.HandleCount);
-            LogToFile("end   Producer_ProduceAsync_Await_Throws");
+            LogToFile("end   Producer_ProduceAsync_Await3");
         }
     }
 }

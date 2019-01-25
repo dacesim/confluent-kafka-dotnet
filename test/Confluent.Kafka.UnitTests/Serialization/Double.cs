@@ -28,7 +28,7 @@ namespace Confluent.Kafka.UnitTests.Serialization
         {
             foreach (var value in TestData)
             {
-                Assert.Equal(value, Deserializers.Double.Deserialize(Serializers.Double.Serialize(value, false, null, null), false, false, null, null));
+                Assert.Equal(value, Deserializers.Double(null, Serializers.Double(null, value), false));
             }
         }
 
@@ -37,7 +37,7 @@ namespace Confluent.Kafka.UnitTests.Serialization
         {
             var buffer = new byte[] { 23, 0, 0, 0, 0, 0, 0, 0 };
             var value = BitConverter.ToDouble(buffer, 0);
-            var data = Serializers.Double.Serialize(value, false, null, null);
+            var data = Serializers.Double(null, value);
             Assert.Equal(23, data[7]);
             Assert.Equal(0, data[0]);
         }
@@ -45,15 +45,15 @@ namespace Confluent.Kafka.UnitTests.Serialization
         [Fact]
         public void DeserializeArgNullThrow()
         {
-            Assert.ThrowsAny<DeserializationException>(() => Deserializers.Double.Deserialize(null, true, false, null, null));
+            Assert.ThrowsAny<ArgumentNullException>(() => Deserializers.Double(null, null, true));
         }
 
         [Fact]
         public void DeserializeArgLengthNotEqual8Throw()
         {
-            Assert.ThrowsAny<DeserializationException>(() => Deserializers.Double.Deserialize(new byte[0], false, false, null, null));
-            Assert.ThrowsAny<DeserializationException>(() => Deserializers.Double.Deserialize(new byte[7], false, false, null, null));
-            Assert.ThrowsAny<DeserializationException>(() => Deserializers.Double.Deserialize(new byte[9], false, false, null, null));
+            Assert.ThrowsAny<ArgumentException>(() => Deserializers.Double(null, new byte[0], false));
+            Assert.ThrowsAny<ArgumentException>(() => Deserializers.Double(null, new byte[7], false));
+            Assert.ThrowsAny<ArgumentException>(() => Deserializers.Double(null, new byte[9], false));
         }
 
         public static double[] TestData

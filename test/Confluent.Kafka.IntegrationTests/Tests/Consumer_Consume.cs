@@ -36,18 +36,21 @@ namespace Confluent.Kafka.IntegrationTests
             LogToFile("start Consumer_Consume");
 
             int N = 2;
-            var firstProduced = Util.ProduceNullStringMessages(bootstrapServers, singlePartitionTopic, 100, N);
+            var firstProduced = Util.ProduceMessages(bootstrapServers, singlePartitionTopic, 100, N);
 
             var consumerConfig = new ConsumerConfig
             {
                 GroupId = Guid.NewGuid().ToString(),
                 BootstrapServers = bootstrapServers,
-                SessionTimeoutMs = 6000,
-                EnablePartitionEof = true
+                SessionTimeoutMs = 6000
             };
 
-            using (var consumer = new Consumer(consumerConfig))
+            using (var consumer = new Consumer<Null, string>(consumerConfig))
             {
+                bool done = false;
+                consumer.OnPartitionEOF += (_, tpo)
+                    => done = true;
+
                 consumer.OnPartitionsAssigned += (_, partitions) =>
                 {
                     Assert.Single(partitions);
@@ -55,18 +58,21 @@ namespace Confluent.Kafka.IntegrationTests
                     consumer.Assign(partitions.Select(p => new TopicPartitionOffset(p, firstProduced.Offset)));
                 };
 
+                consumer.OnPartitionsRevoked += (_, partitions)
+                    => consumer.Unassign();
+
                 consumer.Subscribe(singlePartitionTopic);
 
                 int msgCnt = 0;
-                while (true)
+                while (!done)
                 {
-                    var record = consumer.Consume(TimeSpan.FromMilliseconds(100));
-                    if (record == null) { continue; }
-                    if (record.IsPartitionEOF) { break; }
-
-                    Assert.Equal(TimestampType.CreateTime, record.Message.Timestamp.Type);
-                    Assert.True(Math.Abs((DateTime.UtcNow - record.Message.Timestamp.UtcDateTime).TotalMinutes) < 10.0);
-                    msgCnt += 1;
+                    ConsumeResult<Null, string> record = consumer.Consume(TimeSpan.FromMilliseconds(100));
+                    if (record != null)
+                    {
+                        Assert.Equal(TimestampType.CreateTime, record.Message.Timestamp.Type);
+                        Assert.True(Math.Abs((DateTime.UtcNow - record.Message.Timestamp.UtcDateTime).TotalMinutes) < 10.0);
+                        msgCnt += 1;
+                    }
                 }
 
                 Assert.Equal(msgCnt, N);

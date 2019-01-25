@@ -18,15 +18,14 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Confluent.SchemaRegistry;
-using Confluent.SchemaRegistry.Serdes;
+using Confluent.Kafka.Serialization;
 
 
 namespace Confluent.Kafka.Examples.AvroSpecific
 {
     class Program
     {
-        static async Task Main(string[] args)
+        static void Main(string[] args)
         {
             if (args.Length != 3)
             {
@@ -38,12 +37,9 @@ namespace Confluent.Kafka.Examples.AvroSpecific
             string schemaRegistryUrl = args[1];
             string topicName = args[2];
 
-            var producerConfig = new ProducerConfig
-            {
-                BootstrapServers = bootstrapServers
-            };
+            var producerConfig = new ProducerConfig { BootstrapServers = bootstrapServers };
 
-            var schemaRegistryConfig = new SchemaRegistryConfig
+            var avroConfig = new AvroSerdeProviderConfig
             {
                 // Note: you can specify more than one schema registry url using the
                 // schema.registry.url property for redundancy (comma separated list). 
@@ -52,20 +48,16 @@ namespace Confluent.Kafka.Examples.AvroSpecific
                 SchemaRegistryUrl = schemaRegistryUrl,
                 // optional schema registry client properties:
                 SchemaRegistryRequestTimeoutMs = 5000,
-                SchemaRegistryMaxCachedSchemas = 10
+                SchemaRegistryMaxCachedSchemas = 10,
+                // optional avro serializer properties:
+                AvroSerializerBufferBytes = 50,
+                AvroSerializerAutoRegisterSchemas = true
             };
 
             var consumerConfig = new ConsumerConfig
             {
                 BootstrapServers = bootstrapServers,
-                GroupId = "avro-specific-example-group"
-            };
-
-            var avroSerializerConfig = new AvroSerializerConfig
-            {
-                // optional Avro serializer properties:
-                BufferBytes = 100,
-                AutoRegisterSchemas = true
+                GroupId = Guid.NewGuid().ToString()
             };
 
             // Note: The User class in this project was generated using the Confluent fork of the avrogen.exe tool 
@@ -77,9 +69,8 @@ namespace Confluent.Kafka.Examples.AvroSpecific
             CancellationTokenSource cts = new CancellationTokenSource();
             var consumeTask = Task.Run(() =>
             {
-                using (var schemaRegistry = new CachedSchemaRegistryClient(schemaRegistryConfig))
-                using (var consumer = new Consumer<string, User>(consumerConfig,
-                    new AvroDeserializer<string>(schemaRegistry), new AvroDeserializer<User>(schemaRegistry)))
+                using (var serdeProvider = new AvroSerdeProvider(avroConfig))
+                using (var consumer = new Consumer<string, User>(consumerConfig, serdeProvider.GetDeserializerGenerator<string>(), serdeProvider.GetDeserializerGenerator<User>()))
                 {
                     consumer.OnError += (_, e)
                         => Console.WriteLine($"Error: {e.Reason}");
@@ -91,7 +82,6 @@ namespace Confluent.Kafka.Examples.AvroSpecific
                         try
                         {
                             var consumeResult = consumer.Consume(cts.Token);
-
                             Console.WriteLine($"user key name: {consumeResult.Message.Key}, user value favorite color: {consumeResult.Value.favorite_color}");
                         }
                         catch (ConsumeException e)
@@ -104,9 +94,8 @@ namespace Confluent.Kafka.Examples.AvroSpecific
                 }
             }, cts.Token);
 
-            using (var schemaRegistry = new CachedSchemaRegistryClient(schemaRegistryConfig))
-            using (var producer = new Producer<string, User>(producerConfig,
-                new AvroSerializer<string>(schemaRegistry), new AvroSerializer<User>(schemaRegistry)))
+            using (var serdeProvider = new AvroSerdeProvider(avroConfig))
+            using (var producer = new Producer<string, User>(producerConfig, serdeProvider.GetSerializerGenerator<string>(), serdeProvider.GetSerializerGenerator<User>()))
             {
                 Console.WriteLine($"{producer.Name} producing on {topicName}. Enter user names, q to exit.");
 
@@ -115,7 +104,7 @@ namespace Confluent.Kafka.Examples.AvroSpecific
                 while ((text = Console.ReadLine()) != "q")
                 {
                     User user = new User { name = text, favorite_color = "green", favorite_number = i++ };
-                    await producer
+                    producer
                         .ProduceAsync(topicName, new Message<string, User> { Key = text, Value = user})
                         .ContinueWith(task => task.IsFaulted
                             ? $"error producing message: {task.Exception.Message}"

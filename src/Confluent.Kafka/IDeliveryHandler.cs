@@ -22,19 +22,21 @@ using System;
 namespace Confluent.Kafka
 {
     /// <summary>
-    ///     Defines an interface for handling Producer delivery reports.
+    ///     This interface is implemented by types that handle delivery report
+    ///     callbacks as a result of calls to Confluent.Kafka.Producer.ProduceAsync().
     /// </summary>
     /// <remarks>
-    ///     You will typically never need to implement this interface.
+    ///     Methods of this interface will be executed on the poll thread and will
+    ///     block other operations - consider this when implementing.
     /// </remarks>
-    public interface IDeliveryHandler
+    internal interface IDeliveryHandler
     {        
         /// <summary>
-        ///     Called when a delivery report is available.
+        ///     This method is called when the delivery report is available
         /// </summary>
         /// <param name="deliveryReport">
         ///     The delivery report.
         /// </param>
-        void HandleDeliveryReport(DeliveryReport deliveryReport);
+        void HandleDeliveryReport(Producer.UntypedDeliveryReport deliveryReport);
     }
 }

@@ -45,7 +45,7 @@ namespace Confluent.Kafka.IntegrationTests
             var testString = "hello world";
             var testString2 = "hello world 2";
 
-            DeliveryResult<Null, string> dr;
+            DeliveryReport<Null, string> dr;
             using (var producer = new Producer<Null, string>(producerConfig))
             {
                 dr = producer.ProduceAsync(singlePartitionTopic, new Message<Null, string> { Value = testString }).Result;
@@ -57,7 +57,7 @@ namespace Confluent.Kafka.IntegrationTests
             {
                 // Explicitly specify partition offset.
                 consumer.Assign(new List<TopicPartitionOffset>() { new TopicPartitionOffset(dr.TopicPartition, dr.Offset) });
-                var cr = consumer.Consume(TimeSpan.FromSeconds(10));
+                ConsumeResult<Null, string> cr = consumer.Consume(TimeSpan.FromSeconds(10));
                 Assert.Equal(cr.Value, testString);
 
                 // Determine offset to consume from automatically.
