@@ -18,8 +18,8 @@
 
 using System;
 using System.Linq;
-using System.Threading;
 using System.Text;
+using System.Threading;
 using System.Collections.Generic;
 using Xunit;
 
@@ -38,7 +38,7 @@ namespace Confluent.Kafka.IntegrationTests
             LogToFile("start Consumer_AutoCommit");
 
             int N = 2;
-            var firstProduced = Util.ProduceMessages(bootstrapServers, singlePartitionTopic, 100, N);
+            var firstProduced = Util.ProduceNullStringMessages(bootstrapServers, singlePartitionTopic, 100, N);
 
             var consumerConfig = new ConsumerConfig
             {
@@ -46,31 +46,28 @@ namespace Confluent.Kafka.IntegrationTests
                 BootstrapServers = bootstrapServers,
                 SessionTimeoutMs = 6000,
                 AutoCommitIntervalMs = 1000,
-                EnableAutoCommit = false
+                EnableAutoCommit = false,
+                EnablePartitionEof = true
             };
 
-            using (var consumer = new Consumer<Null, string>(consumerConfig))
+            using (var consumer = new ConsumerBuilder<Null, string>(consumerConfig).Build())
             {
-                bool done = false;
-                consumer.OnPartitionEOF += (_, tpo)
-                    => done = true;
-
-                consumer.OnPartitionsAssigned += (_, partitions) =>
+                consumer.SetPartitionsAssignedHandler((_, tps) =>
                 {
-                    Assert.Single(partitions);
+                    Assert.Single(tps);
                     consumer.Assign(new TopicPartitionOffset(singlePartitionTopic, firstProduced.Partition, firstProduced.Offset));
-                };
+                });
 
                 consumer.Subscribe(singlePartitionTopic);
 
                 int msgCnt = 0;
-                while (!done)
+                while (true)
                 {
-                    ConsumeResult<Null, string> record = consumer.Consume(TimeSpan.FromMilliseconds(100));
-                    if (record != null)
-                    {
-                        msgCnt += 1;
-                    }
+                    var record = consumer.Consume(TimeSpan.FromMilliseconds(100));
+                    if (record == null) { continue; }
+                    if (record.IsPartitionEOF) { break; }
+
+                    msgCnt += 1;
                 }
 
                 Assert.Equal(msgCnt, N);
