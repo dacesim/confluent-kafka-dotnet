@@ -601,7 +601,7 @@ namespace Confluent.Kafka
             }
 
             this.ownedKafkaHandle = SafeKafkaHandle.Create(RdKafkaType.Producer, configPtr, this);
-            configHandle.SetHandleAsInvalid(); // config object is no longer usable.
+            configHandle.SetHandleAsInvalid(); // config object is no longer useable.
 
             if (!manualPoll)
             {

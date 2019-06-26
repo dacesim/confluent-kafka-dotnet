@@ -475,7 +475,7 @@ namespace Confluent.Kafka
         IllegalSaslState = 34,
 
         /// <summary>
-        ///     Unsupported version
+        ///     Unusupported version
         /// </summary>
         UnsupportedVersion = 35,
 
@@ -520,7 +520,7 @@ namespace Confluent.Kafka
         UnsupportedForMessageFormat = 43,
 
         /// <summary>
-        ///     Isolation policy violation
+        ///     Isolation policy volation
         /// </summary>
         PolicyViolation = 44,
 

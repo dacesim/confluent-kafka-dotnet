@@ -28,7 +28,7 @@ namespace Confluent.Kafka
         public Error Error { get; set; }
 
         /// <summary>
-        ///     The TopicPartitionOffsetError associated with the message.
+        ///     The TopicPartitionOffsetError assoicated with the message.
         /// </summary>
         public TopicPartitionOffsetError TopicPartitionOffsetError
         {
