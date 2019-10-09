@@ -21,6 +21,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
+using Confluent.SchemaRegistry;
 using Avro.Generic;
 using Avro.IO;
 
@@ -112,8 +113,8 @@ namespace Confluent.SchemaRegistry.Serdes
                     // better to use hash functions based on the writerSchemaString 
                     // object reference, not value.
                     string subject = isKey
-                        ? schemaRegistryClient.ConstructKeySubjectName(topic, data.Schema.Fullname)
-                        : schemaRegistryClient.ConstructValueSubjectName(topic, data.Schema.Fullname);
+                        ? schemaRegistryClient.ConstructKeySubjectName(topic)
+                        : schemaRegistryClient.ConstructValueSubjectName(topic);
 
                     var subjectSchemaPair = new KeyValuePair<string, string>(subject, writerSchemaString);
                     if (!registeredSchemas.Contains(subjectSchemaPair))

@@ -15,7 +15,11 @@
 // Refer to LICENSE for more information.
 
 using System;
+using System.Collections.Generic;
+using System.Threading;
 using Confluent.Kafka;
+using Confluent.SchemaRegistry;
+using Confluent.SchemaRegistry.Serdes;
 using Xunit;
 
 
@@ -42,7 +46,7 @@ namespace Confluent.SchemaRegistry.Serdes.IntegrationTests
 
             var schemaRegistryConfig = new SchemaRegistryConfig
             {
-                Url = schemaRegistryServers
+                SchemaRegistryUrl = schemaRegistryServers
             };
 
             var topic = Guid.NewGuid().ToString();

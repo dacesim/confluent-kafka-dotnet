@@ -22,6 +22,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avro.IO;
 using Avro.Generic;
+using Confluent.Kafka;
+using Confluent.SchemaRegistry;
 
 
 namespace Confluent.SchemaRegistry.Serdes

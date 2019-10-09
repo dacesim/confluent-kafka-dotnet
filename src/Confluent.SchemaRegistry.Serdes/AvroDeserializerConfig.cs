@@ -14,7 +14,9 @@
 //
 // Refer to LICENSE for more information.
 
+using System.Collections.Generic;
 using Confluent.Kafka;
+using Confluent.SchemaRegistry;
 
 
 namespace Confluent.SchemaRegistry.Serdes
