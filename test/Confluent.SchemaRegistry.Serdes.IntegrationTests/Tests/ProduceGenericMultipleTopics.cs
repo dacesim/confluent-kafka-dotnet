@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using Confluent.Kafka;
-using Confluent.Kafka.Examples.AvroSpecific;
-using Confluent.SchemaRegistry.Serdes;
-using Confluent.SchemaRegistry;
 using Avro;
 using Avro.Generic;
 using Xunit;
@@ -33,7 +29,7 @@ namespace Confluent.SchemaRegistry.Serdes.IntegrationTests
             );
 
             var config = new ProducerConfig { BootstrapServers = bootstrapServers };
-            var schemaRegistryConfig = new SchemaRegistryConfig { SchemaRegistryUrl = schemaRegistryServers };
+            var schemaRegistryConfig = new SchemaRegistryConfig { Url = schemaRegistryServers };
 
             var topic = Guid.NewGuid().ToString();
             var topic2 = Guid.NewGuid().ToString();
