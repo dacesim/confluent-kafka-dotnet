@@ -35,9 +35,9 @@ namespace Confluent.SchemaRegistry.IntegrationTests
 
             var srConfig = new SchemaRegistryConfig
             {
-                Url = config.Server,
-                RequestTimeoutMs = 3000,
-                MaxCachedSchemas = capacity
+                SchemaRegistryUrl = config.Server,
+                SchemaRegistryRequestTimeoutMs = 3000,
+                SchemaRegistryMaxCachedSchemas = capacity
             };
 
             var sr = new CachedSchemaRegistryClient(srConfig);

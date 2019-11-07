@@ -73,15 +73,8 @@ namespace Confluent.Kafka
         /// </summary>
         public TKey Key
         {
-            get
-            {
-                if (Message == null)
-                {
-                    throw new MessageNullException();
-                }
-
-                return Message.Key;
-            }
+            get { return Message.Key; }
+            set { Message.Key = value; }
         }
 
         /// <summary>
@@ -89,15 +82,8 @@ namespace Confluent.Kafka
         /// </summary>
         public TValue Value
         {
-            get
-            {
-                if (Message == null)
-                {
-                    throw new MessageNullException();
-                }
-                
-                return Message.Value;
-            }
+            get { return Message.Value; }
+            set { Message.Value = value; }
         }
 
         /// <summary>
@@ -105,15 +91,8 @@ namespace Confluent.Kafka
         /// </summary>
         public Timestamp Timestamp
         {
-            get
-            {
-                if (Message == null)
-                {
-                    throw new MessageNullException();
-                }
-
-                return Message.Timestamp;
-            }
+            get { return Message.Timestamp; }
+            set { Message.Timestamp = value; }
         }
 
         /// <summary>
@@ -121,15 +100,8 @@ namespace Confluent.Kafka
         /// </summary>
         public Headers Headers
         {
-            get
-            {
-                if (Message == null)
-                {
-                    throw new MessageNullException();
-                }
-                
-                return Message.Headers;
-            }
+            get { return Message.Headers; }
+            set { Message.Headers = value; }
         }
 
         /// <summary>

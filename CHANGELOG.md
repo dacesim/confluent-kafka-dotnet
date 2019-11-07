@@ -1,17 +1,6 @@
-# 1.3.0-PRE1
+# 1.2.2-RC2
 
-## Enhancements
-
-- Added support for [Subject Name Strategies](https://www.confluent.io/blog/put-several-event-types-kafka-topic/) to `Confluent.SchemaRegistry` (thanks to [@fipil](https://github.com/fipil), [@alexpedrero](https://github.com/alexpedrero) and [@eroyal](https://github.com/eroyal) for their input).
-- `ConsumeResult` now throws `MessageNullException`, not `NullReferenceException` when a message property is accessed but no message exists (thanks to [@enzian](https://github.com/enzian) for this change).
-
-## Changes
-
-- Deprecated properties of `SchemaRegistryConfig` with the (superfluous) prefix `SchemaRegistry`. Added corresponding properties without this prefix.
-
-## Fixes
-
-- Resolved issue [993](https://github.com/confluentinc/confluent-kafka-dotnet/issues/993) whereby `RestService` was unable to communicate with Schema Registry hosted on a non-root path. Thanks to [@jonathansant](https://github.com/jonathansant) for this fix.
+- References librdkafka v1.2.2-RC2 which upgrades the lz4 dependency to 1.9.2.
 
 
 # 1.2.1
@@ -31,7 +20,7 @@
 
 - References librdkafka v1.2.0. Refer to the [release notes](https://github.com/edenhill/librdkafka/releases/tag/v1.2.0) for more information. Headline feature is consumer side support for transactions.
 - Added `IDictionary` overload to `Config` constructors (contribution by @AndyPook).
-- `Confluent.Kafka`, `Confluent.SchemaRegistry` and `Confluent.SchemaRegistry.Serdes` are now all signed, and `Confluent.Kafka.StrongName` deprecated.
+- `Confluent.Kafka`, `Confluent.SchemaRegistry` and `Confluent.SchemaRegistry.Serdes` are now all signed, and `Confluent.Kafka.StrongName` depreciated.
 
 ## Fixes
 
@@ -272,7 +261,7 @@ Feature highlights:
 - The methods used to produce messages have changed:
   - Methods that accept a callback are now named `BeginProduce` (not `ProduceAsync`), analogous to similar methods in the standard library.
   - Callbacks are now specified as `Action<DeliveryReportResult<TKey, TValue>>` delegates, not implementations of `IDeliveryHandler`.
-  - The `IDeliveryHandler` interface has been deprecated.
+  - The `IDeliveryHandler` interface has been depreciated.
   - There are two variants of `ProduceAsync` and `BeginProduce`, the first takes a topic name and a `Message`. The second takes a `TopicPartition` and a message.
     - i.e. when producing, there is now clear separation between what is produced and where it is produced to.
   - The new API is more future proof.

@@ -16,11 +16,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 using Confluent.Kafka.Examples.AvroSpecific;
 using Confluent.Kafka.SyncOverAsync;
+using Confluent.SchemaRegistry;
+using Confluent.SchemaRegistry.Serdes;
 using Xunit;
 
 
@@ -28,7 +29,12 @@ namespace Confluent.SchemaRegistry.Serdes.IntegrationTests
 {
     public static partial class Tests
     {
-        private static void ProduceConsume(string bootstrapServers, string schemaRegistryServers, SubjectNameStrategy nameStrategy)
+        /// <summary>
+        ///     Test that messages produced with the Avro serializer can be consumed with the
+        ///     Avro deserializer.
+        /// </summary>
+        [Theory, MemberData(nameof(TestParameters))]
+        public static void ProduceConsume(string bootstrapServers, string schemaRegistryServers)
         {
             var producerConfig = new ProducerConfig
             {
@@ -46,10 +52,7 @@ namespace Confluent.SchemaRegistry.Serdes.IntegrationTests
 
             var schemaRegistryConfig = new SchemaRegistryConfig
             {
-                Url = schemaRegistryServers,
-                // Test ValueSubjectNameStrategy here,
-                // and KeySubjectNameStrategy in ProduceConsumeGeneric.
-                ValueSubjectNameStrategy = nameStrategy
+                SchemaRegistryUrl = schemaRegistryServers
             };
 
             var adminClientConfig = new AdminClientConfig
@@ -66,14 +69,14 @@ namespace Confluent.SchemaRegistry.Serdes.IntegrationTests
 
             using (var schemaRegistry = new CachedSchemaRegistryClient(schemaRegistryConfig))
             using (var producer =
-                new ProducerBuilder<string, ProduceConsumeUser>(producerConfig)
+                new ProducerBuilder<string, User>(producerConfig)
                     .SetKeySerializer(new AvroSerializer<string>(schemaRegistry))
-                    .SetValueSerializer(new AvroSerializer<ProduceConsumeUser>(schemaRegistry))
+                    .SetValueSerializer(new AvroSerializer<User>(schemaRegistry))
                     .Build())
             {
                 for (int i = 0; i < 100; ++i)
                 {
-                    var user = new ProduceConsumeUser
+                    var user = new User
                     {
                         name = i.ToString(),
                         favorite_number = i,
@@ -81,7 +84,7 @@ namespace Confluent.SchemaRegistry.Serdes.IntegrationTests
                     };
                     
                     producer
-                        .ProduceAsync(topic, new Message<string, ProduceConsumeUser> { Key = user.name, Value = user })
+                        .ProduceAsync(topic, new Message<string, User> { Key = user.name, Value = user })
                         .Wait();
                 }
                 Assert.Equal(0, producer.Flush(TimeSpan.FromSeconds(10)));
@@ -89,9 +92,9 @@ namespace Confluent.SchemaRegistry.Serdes.IntegrationTests
 
             using (var schemaRegistry = new CachedSchemaRegistryClient(schemaRegistryConfig))
             using (var consumer =
-                new ConsumerBuilder<string, ProduceConsumeUser>(consumerConfig)
+                new ConsumerBuilder<string, User>(consumerConfig)
                     .SetKeyDeserializer(new AvroDeserializer<string>(schemaRegistry).AsSyncOverAsync())
-                    .SetValueDeserializer(new AvroDeserializer<ProduceConsumeUser>(schemaRegistry).AsSyncOverAsync())
+                    .SetValueDeserializer(new AvroDeserializer<User>(schemaRegistry).AsSyncOverAsync())
                     .SetErrorHandler((_, e) => Assert.True(false, e.Reason))
                     .Build())
             {
@@ -115,63 +118,7 @@ namespace Confluent.SchemaRegistry.Serdes.IntegrationTests
 
                 consumer.Close();
             }
-
-            // Check that what's in schema registry is what's expected.
-            using (var schemaRegistry = new CachedSchemaRegistryClient(schemaRegistryConfig))
-            {
-                var subjects = schemaRegistry.GetAllSubjectsAsync().Result;
-
-                if (nameStrategy == SubjectNameStrategy.TopicRecord)
-                {
-                    Assert.Equal(2, (int)subjects.Where(s => s.Contains(topic)).Count());
-                    Assert.Single(subjects.Where(s => s == $"{topic}-key"));
-                    Assert.Single(subjects.Where(s => s == $"{topic}-{((Avro.RecordSchema)ProduceConsumeUser._SCHEMA).Fullname}"));
-                }
-
-                if (nameStrategy == SubjectNameStrategy.Topic)
-                {
-                    Assert.Equal(2, (int)subjects.Where(s => s.Contains(topic)).Count());
-                    Assert.Single(subjects.Where(s => s == $"{topic}-key"));
-                    Assert.Single(subjects.Where(s => s == $"{topic}-value"));
-                }
-
-                if (nameStrategy == SubjectNameStrategy.Record)
-                {
-                    Assert.Single(subjects.Where(s => s.Contains(topic))); // the string key.
-                    Assert.Single(subjects.Where(s => s == $"{topic}-key"));
-                    Assert.Single(subjects.Where(s => s == $"{((Avro.RecordSchema)ProduceConsumeUser._SCHEMA).Fullname}"));
-                }
-            }
         }
 
-        /// <summary>
-        ///     Test that messages produced with the Avro serializer can be consumed with the
-        ///     Avro deserializer (topic name strategy)
-        /// </summary>
-        [Theory, MemberData(nameof(TestParameters))]
-        private static void ProduceConsume_Topic(string bootstrapServers, string schemaRegistryServers)
-        {
-            ProduceConsume(bootstrapServers, schemaRegistryServers, SubjectNameStrategy.Topic);
-        }
-
-        /// <summary>
-        ///     Test that messages produced with the Avro serializer can be consumed with the
-        ///     Avro deserializer (topic record name strategy)
-        /// </summary>
-        [Theory, MemberData(nameof(TestParameters))]
-        private static void ProduceConsume_TopicRecord(string bootstrapServers, string schemaRegistryServers)
-        {
-            ProduceConsume(bootstrapServers, schemaRegistryServers, SubjectNameStrategy.TopicRecord);
-        }
-
-        /// <summary>
-        ///     Test that messages produced with the Avro serializer can be consumed with the
-        ///     Avro deserializer (record name strategy).
-        /// </summary>
-        [Theory, MemberData(nameof(TestParameters))]
-        private static void ProduceConsume_Record(string bootstrapServers, string schemaRegistryServers)
-        {
-            ProduceConsume(bootstrapServers, schemaRegistryServers, SubjectNameStrategy.Record);
-        }
     }
 }

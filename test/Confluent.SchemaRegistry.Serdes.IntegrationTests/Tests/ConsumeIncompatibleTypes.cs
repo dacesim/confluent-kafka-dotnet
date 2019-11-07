@@ -17,6 +17,8 @@
 using System;
 using System.Collections.Generic;
 using Confluent.Kafka;
+using Confluent.SchemaRegistry;
+using Confluent.SchemaRegistry.Serdes;
 using Confluent.Kafka.SyncOverAsync;
 using Confluent.Kafka.Examples.AvroSpecific;
 using Xunit;
@@ -51,7 +53,7 @@ namespace Confluent.SchemaRegistry.Serdes.IntegrationTests
             
             var schemaRegistryConfig = new SchemaRegistryConfig
             {
-                Url = schemaRegistryServers
+                SchemaRegistryUrl = schemaRegistryServers
             };
 
             using (var schemaRegistry = new CachedSchemaRegistryClient(schemaRegistryConfig))
