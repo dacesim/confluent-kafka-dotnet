@@ -31,8 +31,10 @@ namespace Confluent.Kafka
         {
             { "saslplaintext", "sasl_plaintext" },
             { "saslssl", "sasl_ssl" },
-            { "consistentrandom", "consistent_random"},
-            { "murmur2random", "murmur2_random"}
+            { "consistentrandom", "consistent_random" },
+            { "murmur2random", "murmur2_random" },
+            { "readcommitted", "read_committed" },
+            { "readuncommitted", "read_uncommitted" }
         };
 
         /// <summary>
@@ -123,6 +125,22 @@ namespace Confluent.Kafka
             var result = Get(key);
             if (result == null) { return null; }
             return bool.Parse(result);
+        }
+
+        /// <summary>
+        ///     Gets a configuration property double? value given a key.
+        /// </summary>
+        /// <param name="key">
+        ///     The configuration property to get.
+        /// </param>
+        /// <returns>
+        ///     The configuration property value.
+        /// </returns>
+        protected double? GetDouble(string key)
+        {
+            var result = Get(key);
+            if (result == null) { return null; }
+            return double.Parse(result);
         }
 
         /// <summary>

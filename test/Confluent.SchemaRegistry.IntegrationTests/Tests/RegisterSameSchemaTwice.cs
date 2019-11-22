@@ -33,9 +33,9 @@ namespace Confluent.SchemaRegistry.IntegrationTests
                 "\",\"fields\":[{\"name\":\"name\",\"type\":\"string\"},{\"name\":\"favorite_number\",\"type\":[\"i" +
                 "nt\",\"null\"]},{\"name\":\"favorite_color\",\"type\":[\"string\",\"null\"]}]}";
 
-            var sr = new CachedSchemaRegistryClient(new SchemaRegistryConfig { SchemaRegistryUrl = config.Server });
+            var sr = new CachedSchemaRegistryClient(new SchemaRegistryConfig { Url = config.Server });
 
-            var subject = sr.ConstructKeySubjectName(topicName);
+            var subject = sr.ConstructKeySubjectName(topicName, "Confluent.Kafka.Examples.AvroSpecific.User");
             Assert.Equal(topicName + "-key", subject);
 
             var id1 = sr.RegisterSchemaAsync(subject, testSchema1).Result;

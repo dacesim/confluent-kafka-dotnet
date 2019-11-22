@@ -39,6 +39,32 @@ namespace Confluent.SchemaRegistry
     }
 
     /// <summary>
+    ///     Subject name strategy. Refer to: https://www.confluent.io/blog/put-several-event-types-kafka-topic/
+    /// </summary>
+    public enum SubjectNameStrategy
+    {
+        /// <summary>
+        ///     (default): The subject name for message keys is &lt;topic&gt;-key, and &lt;topic&gt;-value for message values.
+        ///     This means that the schemas of all messages in the topic must be compatible with each other.
+        /// </summary>
+        Topic,
+
+        /// <summary>
+        ///     The subject name is the fully-qualified name of the Avro record type of the message.
+        ///     Thus, the schema registry checks the compatibility for a particular record type, regardless of topic.
+        ///     This setting allows any number of different event types in the same topic.
+        /// </summary>
+        Record,
+
+        /// <summary>
+        ///     The subject name is &lt;topic&gt;-&lt;type&gt;, where &lt;topic&gt; is the Kafka topic name, and &lt;type&gt;
+        ///     is the fully-qualified name of the Avro record type of the message. This setting also allows any number of event
+        ///     types in the same topic, and further constrains the compatibility check to the current topic only.
+        /// </summary>
+        TopicRecord
+    }
+
+    /// <summary>
     ///     <see cref="CachedSchemaRegistryClient" /> configuration properties.
     /// </summary>
     public class SchemaRegistryConfig : IEnumerable<KeyValuePair<string, string>>
@@ -85,12 +111,22 @@ namespace Confluent.SchemaRegistry
             ///     default: "" (no authentication).
             /// </summary>
             public const string SchemaRegistryBasicAuthUserInfo = "schema.registry.basic.auth.user.info";
+
+            /// <summary>
+            ///     Key subject name strategy.
+            /// </summary>
+            public const string SchemaRegistryKeySubjectNameStrategy = "schema.registry.key.subject.name.strategy";
+
+            /// <summary>
+            ///     Value subject name strategy.
+            /// </summary>
+            public const string SchemaRegistryValueSubjectNameStrategy = "schema.registry.value.subject.name.strategy";
         }
 
         /// <summary>
         ///     Specifies the configuration property(ies) that provide the basic authentication credentials.
         /// </summary>
-        public AuthCredentialsSource? SchemaRegistryBasicAuthCredentialsSource
+        public AuthCredentialsSource? BasicAuthCredentialsSource
         {
             get
             {
@@ -110,13 +146,47 @@ namespace Confluent.SchemaRegistry
         }
 
         /// <summary>
+        ///     Specifies the configuration property(ies) that provide the basic authentication credentials.
+        /// </summary>
+        [Obsolete("This property will be removed in a future version of this library in favor of the BasicAuthCredentialsSource property")]
+        public AuthCredentialsSource? SchemaRegistryBasicAuthCredentialsSource
+        {
+            get => BasicAuthCredentialsSource;
+            set { BasicAuthCredentialsSource = value; }
+        }
+
+
+        /// <summary>
         ///     A comma-separated list of URLs for schema registry instances that are
         ///     used to register or lookup schemas.
         /// </summary>
-        public string SchemaRegistryUrl
+        public string Url
         {
             get { return Get(SchemaRegistryConfig.PropertyNames.SchemaRegistryUrl); } 
             set { SetObject(SchemaRegistryConfig.PropertyNames.SchemaRegistryUrl, value); }
+        }
+
+        /// <summary>
+        ///     A comma-separated list of URLs for schema registry instances that are
+        ///     used to register or lookup schemas.
+        /// </summary>
+        [Obsolete("This property will be removed in a future version of this library in favor of the Url property")]
+        public string SchemaRegistryUrl
+        {
+            get => Url;
+            set { Url = value; }
+        }
+
+
+        /// <summary>
+        ///     Specifies the timeout for requests to Confluent Schema Registry.
+        /// 
+        ///     default: 30000
+        /// </summary>
+        public int? RequestTimeoutMs
+        {
+            get { return GetInt(SchemaRegistryConfig.PropertyNames.SchemaRegistryRequestTimeoutMs); }
+            set { SetObject(SchemaRegistryConfig.PropertyNames.SchemaRegistryRequestTimeoutMs, value.ToString()); }
         }
 
         /// <summary>
@@ -124,10 +194,24 @@ namespace Confluent.SchemaRegistry
         /// 
         ///     default: 30000
         /// </summary>
+        [Obsolete("This property will be removed in a future version of this library in favor of the RequestTimeoutMs property")]
         public int? SchemaRegistryRequestTimeoutMs
         {
-            get { return GetInt(SchemaRegistryConfig.PropertyNames.SchemaRegistryRequestTimeoutMs); }
-            set { SetObject(SchemaRegistryConfig.PropertyNames.SchemaRegistryRequestTimeoutMs, value.ToString()); }
+            get => RequestTimeoutMs;
+            set { RequestTimeoutMs = value; }
+        }
+
+
+        /// <summary>
+        ///     Specifies the maximum number of schemas CachedSchemaRegistryClient
+        ///     should cache locally.
+        /// 
+        ///     default: 1000
+        /// </summary>
+        public int? MaxCachedSchemas
+        {
+            get { return GetInt(SchemaRegistryConfig.PropertyNames.SchemaRegistryMaxCachedSchemas); }
+            set { SetObject(SchemaRegistryConfig.PropertyNames.SchemaRegistryMaxCachedSchemas, value.ToString()); }
         }
 
         /// <summary>
@@ -136,20 +220,115 @@ namespace Confluent.SchemaRegistry
         /// 
         ///     default: 1000
         /// </summary>
+        [Obsolete("This property will be removed in a future version of this library in favor of the MaxCachedSchemas property")]
         public int? SchemaRegistryMaxCachedSchemas
         {
-            get { return GetInt(SchemaRegistryConfig.PropertyNames.SchemaRegistryMaxCachedSchemas); }
-            set { SetObject(SchemaRegistryConfig.PropertyNames.SchemaRegistryMaxCachedSchemas, value.ToString()); }
+            get => MaxCachedSchemas;
+            set { MaxCachedSchemas = value; }
+        }
+
+
+        /// <summary>
+        ///     Basic auth credentials in the form {username}:{password}.
+        /// </summary>
+        public string BasicAuthUserInfo
+        {
+            get { return Get(SchemaRegistryConfig.PropertyNames.SchemaRegistryBasicAuthUserInfo); }
+            set { SetObject(SchemaRegistryConfig.PropertyNames.SchemaRegistryBasicAuthUserInfo, value); }
         }
 
         /// <summary>
         ///     Basic auth credentials in the form {username}:{password}.
         /// </summary>
+        [Obsolete("This property will be removed in a future version of this library in favor of the BasicAuthUserInfo property")]
         public string SchemaRegistryBasicAuthUserInfo
         {
-            get { return Get(SchemaRegistryConfig.PropertyNames.SchemaRegistryBasicAuthUserInfo); }
-            set { SetObject(SchemaRegistryConfig.PropertyNames.SchemaRegistryBasicAuthUserInfo, value); }
+            get => BasicAuthUserInfo;
+            set { BasicAuthUserInfo = value; }
         }
+
+
+        /// <summary>
+        ///     Key subject name strategy.
+        ///     
+        ///     default: SubjectNameStrategy.Topic
+        /// </summary>
+        public SubjectNameStrategy? KeySubjectNameStrategy
+        {
+            get
+            {
+                var r = Get(PropertyNames.SchemaRegistryKeySubjectNameStrategy);
+                if (r == null) { return null; }
+                else
+                {
+                    SubjectNameStrategy result;
+                    if (!Enum.TryParse<SubjectNameStrategy>(r, out result))
+                        throw new ArgumentException(
+                            $"Unknown ${PropertyNames.SchemaRegistryKeySubjectNameStrategy} value: {r}.");
+                    else
+                        return result;
+                }
+            }
+            set
+            {
+                if (value == null) { this.properties.Remove(PropertyNames.SchemaRegistryKeySubjectNameStrategy); }
+                else { this.properties[PropertyNames.SchemaRegistryKeySubjectNameStrategy] = value.ToString(); }
+            }
+        }
+
+        /// <summary>
+        ///     Key subject name strategy.
+        ///     
+        ///     default: SubjectNameStrategy.Topic
+        /// </summary>
+        [Obsolete("This property will be removed in a future version of this library in favor of the KeySubjectNameStrategy property")]
+        public SubjectNameStrategy? SchemaRegistryKeySubjectNameStrategy
+        {
+            get => KeySubjectNameStrategy;
+            set { KeySubjectNameStrategy = value; }
+        }
+
+
+        /// <summary>
+        ///     Value subject name strategy.
+        ///
+        ///     default: SubjectNameStrategy.Topic
+        /// </summary>
+        public SubjectNameStrategy? ValueSubjectNameStrategy
+        {
+            get
+            {
+                var r = Get(PropertyNames.SchemaRegistryValueSubjectNameStrategy);
+                if (r == null) { return null; }
+                else
+                {
+                    SubjectNameStrategy result;
+                    if (!Enum.TryParse<SubjectNameStrategy>(r, out result))
+                        throw new ArgumentException(
+                            $"Unknown ${PropertyNames.SchemaRegistryValueSubjectNameStrategy} value: {r}.");
+                    else
+                        return result;
+                }
+            }
+            set
+            {
+                if (value == null) { this.properties.Remove(PropertyNames.SchemaRegistryValueSubjectNameStrategy); }
+                else { this.properties[PropertyNames.SchemaRegistryValueSubjectNameStrategy] = value.ToString(); }
+            }
+        }
+
+        /// <summary>
+        ///     Value subject name strategy.
+        ///     
+        ///     default: SubjectNameStrategy.Topic
+        /// </summary>
+        [Obsolete("This property will be removed in a future version of this library in favor of the ValueSubjectNameStrategy property")]
+        public SubjectNameStrategy? SchemaRegistryValueSubjectNameStrategy
+        {
+            get => ValueSubjectNameStrategy;
+            set { ValueSubjectNameStrategy = value; }
+        }
+
 
         /// <summary>
         ///     Set a configuration property using a string key / value pair.
