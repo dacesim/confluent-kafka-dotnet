@@ -15,6 +15,11 @@
 - Resolved issue [993](https://github.com/confluentinc/confluent-kafka-dotnet/issues/993) whereby `RestService` was unable to communicate with Schema Registry hosted on a non-root path. Thanks to [@jonathansant](https://github.com/jonathansant) for this fix.
 
 
+# 1.2.2
+
+- References librdkafka v1.2.2 which upgrades the lz4 dependency to v1.9.2.
+
+
 # 1.2.1
 
 ## Fixes
