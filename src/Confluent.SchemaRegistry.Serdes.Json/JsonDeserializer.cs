@@ -21,7 +21,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Confluent.Kafka;
-using NJsonSchema.Generation;
 
 
 namespace Confluent.SchemaRegistry.Serdes
@@ -49,8 +48,6 @@ namespace Confluent.SchemaRegistry.Serdes
     public class JsonDeserializer<T> : IAsyncDeserializer<T> where T : class, new()
     {
         private readonly int headerSize =  sizeof(int) + sizeof(byte);
-        
-        private readonly JsonSchemaGeneratorSettings jsonSchemaGeneratorSettings;
 
         /// <summary>
         ///     Initialize a new JsonDeserializer instance.
@@ -59,13 +56,8 @@ namespace Confluent.SchemaRegistry.Serdes
         ///     Deserializer configuration properties (refer to
         ///     <see cref="JsonDeserializerConfig" />).
         /// </param>
-        /// <param name="jsonSchemaGeneratorSettings">
-        ///     JSON schema generator settings.
-        /// </param>
-        public JsonDeserializer(IEnumerable<KeyValuePair<string, string>> config = null, JsonSchemaGeneratorSettings jsonSchemaGeneratorSettings = null)
+        public JsonDeserializer(IEnumerable<KeyValuePair<string, string>> config = null)
         {
-            this.jsonSchemaGeneratorSettings = jsonSchemaGeneratorSettings;
-
             if (config == null) { return; }
 
             if (config.Count() > 0)
@@ -115,7 +107,7 @@ namespace Confluent.SchemaRegistry.Serdes
                 using (var stream = new MemoryStream(array, headerSize, array.Length - headerSize))
                 using (var sr = new System.IO.StreamReader(stream, Encoding.UTF8))
                 {
-                    return Task.FromResult(Newtonsoft.Json.JsonConvert.DeserializeObject<T>(sr.ReadToEnd(), this.jsonSchemaGeneratorSettings?.ActualSerializerSettings));
+                    return Task.FromResult(Newtonsoft.Json.JsonConvert.DeserializeObject<T>(sr.ReadToEnd()));
                 }
             }
             catch (AggregateException e)
