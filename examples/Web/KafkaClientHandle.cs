@@ -14,7 +14,6 @@
 //
 // Refer to LICENSE for more information.
 
-using System;
 using Confluent.Kafka;
 using Microsoft.Extensions.Configuration;
 
@@ -34,7 +33,7 @@ namespace Web
     ///     Confluent.Kafka.IProducer instances for each Message type you wish to
     ///     produce.
     /// </summary>
-    public class KafkaClientHandle : IDisposable
+    public class KafkaClientHandle
     {
         IProducer<byte[], byte[]> kafkaProducer;
 

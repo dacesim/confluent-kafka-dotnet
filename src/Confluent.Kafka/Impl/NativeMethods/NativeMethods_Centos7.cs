@@ -40,7 +40,11 @@ namespace Confluent.Kafka.Impl.NativeMethods
     /// </remarks>
     internal class NativeMethods_Centos7
     {
+#if NET45 || NET46 || NET47
+         public const string DllName = "centos7-librdkafka.so";
+#else
         public const string DllName = "centos7-librdkafka";
+#endif
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
         internal static extern IntPtr rd_kafka_version();
@@ -342,6 +346,20 @@ namespace Confluent.Kafka.Impl.NativeMethods
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
         internal static extern ErrorCode rd_kafka_assign(IntPtr rk,
                 /* const rd_kafka_topic_partition_list_t * */ IntPtr partitions);
+
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern IntPtr rd_kafka_incremental_assign(IntPtr rk,
+                    /* const rd_kafka_topic_partition_list_t * */ IntPtr partitions);
+
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern IntPtr rd_kafka_incremental_unassign(IntPtr rk,
+                      /* const rd_kafka_topic_partition_list_t * */ IntPtr partitions);
+
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern IntPtr rd_kafka_assignment_lost(IntPtr rk);
+
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        internal static extern IntPtr rd_kafka_rebalance_protocol(IntPtr rk);
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
         internal static extern ErrorCode rd_kafka_assignment(IntPtr rk,
