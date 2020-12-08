@@ -1,4 +1,4 @@
-// *** Auto-generated from librdkafka v1.6.0-PRE1 *** - do not modify manually.
+// *** Auto-generated from librdkafka v1.5.0-RC1 *** - do not modify manually.
 //
 // Copyright 2018 Confluent Inc.
 //
@@ -152,12 +152,7 @@ namespace Confluent.Kafka
         /// <summary>
         ///     RoundRobin
         /// </summary>
-        RoundRobin,
-
-        /// <summary>
-        ///     CooperativeSticky
-        /// </summary>
-        CooperativeSticky
+        RoundRobin
     }
 
     /// <summary>
@@ -559,7 +554,7 @@ namespace Confluent.Kafka
         public bool? LogThreadName { get { return GetBool("log.thread.name"); } set { this.SetObject("log.thread.name", value); } }
 
         /// <summary>
-        ///     If enabled librdkafka will initialize the PRNG with srand(current_time.milliseconds) on the first invocation of rd_kafka_new() (required only if rand_r() is not available on your platform). If disabled the application must call srand() prior to calling rd_kafka_new().
+        ///     If enabled librdkafka will initialize the POSIX PRNG with srand(current_time.milliseconds) on the first invocation of rd_kafka_new(). If disabled the application must call srand() prior to calling rd_kafka_new().
         ///
         ///     default: true
         ///     importance: low
@@ -912,7 +907,7 @@ namespace Confluent.Kafka
         /// <summary>
         ///     The ack timeout of the producer request in milliseconds. This value is only enforced by the broker and relies on `request.required.acks` being != 0.
         ///
-        ///     default: 30000
+        ///     default: 5000
         ///     importance: medium
         /// </summary>
         public int? RequestTimeoutMs { get { return GetInt("request.timeout.ms"); } set { this.SetObject("request.timeout.ms", value); } }
@@ -992,7 +987,7 @@ namespace Confluent.Kafka
         /// <summary>
         ///     Delay in milliseconds to wait for messages in the producer queue to accumulate before constructing message batches (MessageSets) to transmit to brokers. A higher value allows larger and more effective (less overhead, improved compression) batches of messages to accumulate at the expense of increased message delivery latency.
         ///
-        ///     default: 5
+        ///     default: 0.5
         ///     importance: high
         /// </summary>
         public double? LingerMs { get { return GetDouble("linger.ms"); } set { this.SetObject("linger.ms", value); } }
@@ -1000,7 +995,7 @@ namespace Confluent.Kafka
         /// <summary>
         ///     How many times to retry sending a failing Message. **Note:** retrying may cause reordering unless `enable.idempotence` is set to true.
         ///
-        ///     default: 2147483647
+        ///     default: 2
         ///     importance: high
         /// </summary>
         public int? MessageSendMaxRetries { get { return GetInt("message.send.max.retries"); } set { this.SetObject("message.send.max.retries", value); } }
@@ -1044,14 +1039,6 @@ namespace Confluent.Kafka
         ///     importance: medium
         /// </summary>
         public int? BatchSize { get { return GetInt("batch.size"); } set { this.SetObject("batch.size", value); } }
-
-        /// <summary>
-        ///     Delay in milliseconds to wait to assign new sticky partitions for each topic. By default, set to double the time of linger.ms. To disable sticky behavior, set to 0. This behavior affects messages with the key NULL in all cases, and messages with key lengths of zero when the consistent_random partitioner is in use. These messages would otherwise be assigned randomly. A higher value allows for more effective batching of these messages.
-        ///
-        ///     default: 10
-        ///     importance: low
-        /// </summary>
-        public int? StickyPartitioningLingerMs { get { return GetInt("sticky.partitioning.linger.ms"); } set { this.SetObject("sticky.partitioning.linger.ms", value); } }
 
     }
 
@@ -1120,7 +1107,7 @@ namespace Confluent.Kafka
         public string GroupInstanceId { get { return Get("group.instance.id"); } set { this.SetObject("group.instance.id", value); } }
 
         /// <summary>
-        ///     The name of one or more partition assignment strategies. The elected group leader will use a strategy supported by all members of the group to assign partitions to group members. If there is more than one eligible strategy, preference is determined by the order of this list (strategies earlier in the list have higher priority). Cooperative and non-cooperative (eager) strategies must not be mixed. Available strategies: range, roundrobin, cooperative-sticky.
+        ///     Name of partition assignment strategy to use when elected group leader assigns partitions to group members.
         ///
         ///     default: range,roundrobin
         ///     importance: medium
@@ -1144,7 +1131,7 @@ namespace Confluent.Kafka
         public int? HeartbeatIntervalMs { get { return GetInt("heartbeat.interval.ms"); } set { this.SetObject("heartbeat.interval.ms", value); } }
 
         /// <summary>
-        ///     Group protocol type. NOTE: Currently, the only supported group protocol type is `consumer`.
+        ///     Group protocol type
         ///
         ///     default: consumer
         ///     importance: low

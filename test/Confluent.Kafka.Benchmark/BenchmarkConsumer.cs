@@ -23,19 +23,15 @@ namespace Confluent.Kafka.Benchmark
 {
     public static class BenchmarkConsumer
     {
-        public static void BenchmarkConsumerImpl(string bootstrapServers, string topic, string group, long firstMessageOffset, int nMessages, int nTests, int nHeaders, string username, string password)
+        public static void BenchmarkConsumerImpl(string bootstrapServers, string topic, long firstMessageOffset, int nMessages, int nTests, int nHeaders)
         {
             var consumerConfig = new ConsumerConfig
             {
-                GroupId = group,
+                GroupId = "benchmark-consumer-group",
                 BootstrapServers = bootstrapServers,
                 SessionTimeoutMs = 6000,
                 ConsumeResultFields = nHeaders == 0 ? "none" : "headers",
-                QueuedMinMessages = 1000000,
-                SaslUsername = username,
-                SaslPassword = password,
-                SecurityProtocol = username == null ? SecurityProtocol.Plaintext : SecurityProtocol.SaslSsl,
-                SaslMechanism = SaslMechanism.Plain
+                QueuedMinMessages = 1000000
             };
 
             using (var consumer = new ConsumerBuilder<Ignore, Ignore>(consumerConfig).Build())
@@ -70,7 +66,7 @@ namespace Confluent.Kafka.Benchmark
             }
         }
 
-        public static void Consume(string bootstrapServers, string topic, string group, long firstMessageOffset, int nMessages, int nHeaders, int nTests, string username, string password)
-            => BenchmarkConsumerImpl(bootstrapServers, topic, group, firstMessageOffset, nMessages, nTests, nHeaders, username, password);
+        public static void Consume(string bootstrapServers, string topic, long firstMessageOffset, int nMessages, int nHeaders, int nTests)
+            => BenchmarkConsumerImpl(bootstrapServers, topic, firstMessageOffset, nMessages, nTests, nHeaders);
     }
 }

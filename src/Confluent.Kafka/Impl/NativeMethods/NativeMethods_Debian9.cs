@@ -17,6 +17,7 @@
 using System;
 using System.Text;
 using System.Runtime.InteropServices;
+using Confluent.Kafka.Internal;
 using Confluent.Kafka.Admin;
 
 
@@ -39,11 +40,7 @@ namespace Confluent.Kafka.Impl.NativeMethods
     /// </remarks>
     internal class NativeMethods_Debian9
     {
-#if NET45 || NET46 || NET47
-         public const string DllName = "debian9-librdkafka.so";
-#else
         public const string DllName = "debian9-librdkafka";
-#endif
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
         internal static extern IntPtr rd_kafka_version();
@@ -133,9 +130,6 @@ namespace Confluent.Kafka.Impl.NativeMethods
         internal static extern IntPtr rd_kafka_conf_dup(IntPtr conf);
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        internal static extern SafeTopicConfigHandle rd_kafka_default_topic_conf_dup(SafeKafkaHandle rk);
-
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
         internal static extern ConfRes rd_kafka_conf_set(
                 IntPtr conf,
                 [MarshalAs(UnmanagedType.LPStr)] string name,
@@ -188,10 +182,6 @@ namespace Confluent.Kafka.Impl.NativeMethods
                 IntPtr conf, IntPtr tconf);
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        internal static extern SafeTopicConfigHandle rd_kafka_conf_get_default_topic_conf(
-                SafeConfigHandle conf);
-
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
         internal static extern ConfRes rd_kafka_conf_get(
                 IntPtr conf,
                 [MarshalAs(UnmanagedType.LPStr)] string name,
@@ -218,8 +208,8 @@ namespace Confluent.Kafka.Impl.NativeMethods
         internal static extern SafeTopicConfigHandle rd_kafka_topic_conf_new();
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        internal static extern SafeTopicConfigHandle rd_kafka_topic_conf_dup(
-                SafeTopicConfigHandle conf);
+        internal static extern /* rd_kafka_topic_conf_t * */ IntPtr rd_kafka_topic_conf_dup(
+                /* const rd_kafka_topic_conf_t * */ IntPtr conf);
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
         internal static extern void rd_kafka_topic_conf_destroy(IntPtr conf);
@@ -231,10 +221,6 @@ namespace Confluent.Kafka.Impl.NativeMethods
                 [MarshalAs(UnmanagedType.LPStr)] string value,
                 StringBuilder errstr,
                 UIntPtr errstr_size);
-
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        internal static extern void rd_kafka_topic_conf_set_opaque(
-                IntPtr topic_conf, IntPtr opaque);
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
         internal static extern void rd_kafka_topic_conf_set_partitioner_cb(
@@ -301,7 +287,8 @@ namespace Confluent.Kafka.Impl.NativeMethods
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
         internal static extern SafeTopicHandle rd_kafka_topic_new(
-                IntPtr rk, IntPtr topic,
+                IntPtr rk,
+                [MarshalAs(UnmanagedType.LPStr)] string topic,
                 /* rd_kafka_topic_conf_t * */ IntPtr conf);
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
@@ -355,20 +342,6 @@ namespace Confluent.Kafka.Impl.NativeMethods
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
         internal static extern ErrorCode rd_kafka_assign(IntPtr rk,
                 /* const rd_kafka_topic_partition_list_t * */ IntPtr partitions);
-
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        internal static extern IntPtr rd_kafka_incremental_assign(IntPtr rk,
-                    /* const rd_kafka_topic_partition_list_t * */ IntPtr partitions);
-
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        internal static extern IntPtr rd_kafka_incremental_unassign(IntPtr rk,
-                      /* const rd_kafka_topic_partition_list_t * */ IntPtr partitions);
-
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        internal static extern IntPtr rd_kafka_assignment_lost(IntPtr rk);
-
-        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        internal static extern IntPtr rd_kafka_rebalance_protocol(IntPtr rk);
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
         internal static extern ErrorCode rd_kafka_assignment(IntPtr rk,

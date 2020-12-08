@@ -5,11 +5,10 @@
     <AssemblyName>Protobuf</AssemblyName>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.1</TargetFramework>
-    <LangVersion>7.1</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- nuget package reference: <PackageReference Include="Confluent.SchemaRegistry.Serdes.Protobuf" Version="1.6.0-PRE4" /> -->
+    <!-- nuget package reference: <PackageReference Include="Confluent.SchemaRegistry.Serdes.Protobuf" Version="1.5.3-RC5" /> -->
     <ProjectReference Include="../../src/Confluent.SchemaRegistry.Serdes.Protobuf/Confluent.SchemaRegistry.Serdes.Protobuf.csproj" />
   </ItemGroup>
 

@@ -40,8 +40,10 @@ namespace Confluent.Kafka.Impl
             return ch;
         }
 
-        internal SafeTopicConfigHandle Duplicate()
-            => Librdkafka.topic_conf_dup(this);
+        internal IntPtr Dup()
+        {
+            return Librdkafka.topic_conf_dup(handle);
+        }
 
         // TODO: deduplicate, merge with other one
         internal Dictionary<string, string> Dump()

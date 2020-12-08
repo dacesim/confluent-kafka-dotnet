@@ -44,14 +44,16 @@ namespace Confluent.Kafka.IntegrationTests
 
             IEnumerable<TopicPartition> assignment = null;
 
-            using (var topic = new TemporaryTopic(bootstrapServers, 1))
             using (var producer = new ProducerBuilder<byte[], byte[]>(producerConfig).Build())
             using (var consumer =
                 new ConsumerBuilder<byte[], byte[]>(consumerConfig)
-                    .SetPartitionsAssignedHandler((c, partitions) => { assignment = partitions; })
+                    .SetPartitionsAssignedHandler((c, partitions) =>
+                    {
+                        assignment = partitions;
+                    })
                     .Build())
             {
-                consumer.Subscribe(topic.Name);
+                consumer.Subscribe(singlePartitionTopic);
 
                 while (assignment == null)
                 {
@@ -61,19 +63,17 @@ namespace Confluent.Kafka.IntegrationTests
                 ConsumeResult<byte[], byte[]> record = consumer.Consume(TimeSpan.FromSeconds(2));
                 Assert.Null(record);
 
-                producer.ProduceAsync(topic.Name, new Message<byte[], byte[]> { Value = Serializers.Utf8.Serialize("test value", SerializationContext.Empty) }).Wait();
+                producer.ProduceAsync(singlePartitionTopic, new Message<byte[], byte[]> { Value = Serializers.Utf8.Serialize("test value", SerializationContext.Empty) }).Wait();
                 record = consumer.Consume(TimeSpan.FromSeconds(10));
                 Assert.NotNull(record?.Message);
-                Assert.Equal(0, record?.Offset);
 
                 consumer.Pause(assignment);
-                producer.ProduceAsync(topic.Name, new Message<byte[], byte[]> { Value = Serializers.Utf8.Serialize("test value 2", SerializationContext.Empty) }).Wait();
+                producer.ProduceAsync(singlePartitionTopic, new Message<byte[], byte[]> { Value = Serializers.Utf8.Serialize("test value 2", SerializationContext.Empty) }).Wait();
                 record = consumer.Consume(TimeSpan.FromSeconds(2));
                 Assert.Null(record);
                 consumer.Resume(assignment);
                 record = consumer.Consume(TimeSpan.FromSeconds(10));
                 Assert.NotNull(record?.Message);
-                Assert.Equal(1, record?.Offset);
 
                 // check that these don't throw.
                 consumer.Pause(new List<TopicPartition>());

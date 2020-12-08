@@ -27,13 +27,10 @@ namespace Confluent.Kafka.Benchmark
         private static long BenchmarkProducerImpl(
             string bootstrapServers, 
             string topic, 
-            int nMessages,
-            int msgSize,
+            int nMessages, 
             int nTests, 
             int nHeaders,
-            bool useDeliveryHandler,
-            string username,
-            string password)
+            bool useDeliveryHandler)
         {
             // mirrors the librdkafka performance test example.
             var config = new ProducerConfig
@@ -43,11 +40,7 @@ namespace Confluent.Kafka.Benchmark
                 MessageSendMaxRetries = 3,
                 RetryBackoffMs = 500 ,
                 LingerMs = 100,
-                DeliveryReportFields = "none",
-                SaslUsername = username,
-                SaslPassword = password,
-                SecurityProtocol = username == null ? SecurityProtocol.Plaintext : SecurityProtocol.SaslSsl,
-                SaslMechanism = SaslMechanism.Plain
+                DeliveryReportFields = "none"
             };
 
             DeliveryResult<Null, byte[]> firstDeliveryReport = null;
@@ -69,7 +62,7 @@ namespace Confluent.Kafka.Benchmark
                     Console.WriteLine($"{producer.Name} producing on {topic} " + (useDeliveryHandler ? "[Action<Message>]" : "[Task]"));
 
                     byte cnt = 0;
-                    var val = new byte[msgSize].Select(a => ++cnt).ToArray();
+                    var val = new byte[100].Select(a => ++cnt).ToArray();
 
                     // this avoids including connection setup, topic creation time, etc.. in result.
                     firstDeliveryReport = producer.ProduceAsync(topic, new Message<Null, byte[]> { Value = val, Headers = headers }).Result;
@@ -171,14 +164,14 @@ namespace Confluent.Kafka.Benchmark
         ///     Producer benchmark masquerading as an integration test.
         ///     Uses Task based produce method.
         /// </summary>
-        public static long TaskProduce(string bootstrapServers, string topic, int nMessages, int msgSize, int nHeaders, int nTests, string username, string password)
-            => BenchmarkProducerImpl(bootstrapServers, topic, nMessages, msgSize, nTests, nHeaders, false, username, password);
+        public static long TaskProduce(string bootstrapServers, string topic, int nMessages, int nHeaders, int nTests)
+            => BenchmarkProducerImpl(bootstrapServers, topic, nMessages, nTests, nHeaders, false);
 
         /// <summary>
         ///     Producer benchmark (with custom delivery handler) masquerading
         ///     as an integration test. Uses Task based produce method.
         /// </summary>
-        public static long DeliveryHandlerProduce(string bootstrapServers, string topic, int nMessages, int msgSize, int nHeaders, int nTests, string username, string password)
-            => BenchmarkProducerImpl(bootstrapServers, topic, nMessages, msgSize, nTests, nHeaders, true, username, password);
+        public static long DeliveryHandlerProduce(string bootstrapServers, string topic, int nMessages, int nHeaders, int nTests)
+            => BenchmarkProducerImpl(bootstrapServers, topic, nMessages, nTests, nHeaders, true);
     }
 }

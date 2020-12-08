@@ -18,9 +18,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
+using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 using Confluent.Kafka.Internal;
 
@@ -31,7 +34,6 @@ namespace Confluent.Kafka.Impl
         Producer,
         Consumer
     }
-
 
     [StructLayout(LayoutKind.Sequential)]
     struct rd_kafka_message
@@ -95,7 +97,7 @@ namespace Confluent.Kafka.Impl
         private Dictionary<string, SafeTopicHandle> topicHandles
             = new Dictionary<string, SafeTopicHandle>(StringComparer.Ordinal);
 
-        internal SafeTopicHandle newTopic(string topic, IntPtr topicConfigPtr)
+        internal SafeTopicHandle getKafkaTopicHandle(string topic)
         {
             lock (topicHandlesLock)
             {
@@ -104,7 +106,7 @@ namespace Confluent.Kafka.Impl
                     return topicHandles[topic];
                 }
 
-                var topicHandle = this.NewTopic(topic, topicConfigPtr);
+                var topicHandle = this.NewTopic(topic, IntPtr.Zero);
                 topicHandles.Add(topic, topicHandle);
                 return topicHandle;
             }
@@ -267,13 +269,7 @@ namespace Confluent.Kafka.Impl
                 Librdkafka.topic_conf_destroy(config);
                 throw new Exception("Failed to create topic (DangerousAddRef failed)");
             }
-
-            SafeTopicHandle topicHandle = null;
-            using (var pinnedString = new Util.Marshal.StringAsPinnedUTF8(topic))
-            {
-                topicHandle = Librdkafka.topic_new(handle, pinnedString.Ptr, config);
-            }
-
+            var topicHandle = Librdkafka.topic_new(handle, topic, config);
             if (topicHandle.IsInvalid)
             {
                 DangerousRelease();
@@ -676,17 +672,7 @@ namespace Confluent.Kafka.Impl
         internal void Subscribe(IEnumerable<string> topics)
         {
             ThrowIfHandleClosed();
-
-            if (topics == null)
-            {
-                throw new ArgumentNullException("Subscription must not be null");
-            }
-
-            if (topics.Any(t => t == null))
-            {
-                throw new ArgumentNullException("Subscribed-to topic must not be null");
-            }
-
+            
             IntPtr list = Librdkafka.topic_partition_list_new((IntPtr) topics.Count());
             if (list == IntPtr.Zero)
             {
@@ -766,9 +752,7 @@ namespace Confluent.Kafka.Impl
             return ret;
         }
 
-        private void AssignImpl(IEnumerable<TopicPartitionOffset> partitions,
-                                Func<IntPtr, IntPtr, ErrorCode> assignMethodErr,
-                                Func<IntPtr, IntPtr, IntPtr> assignMethodError)
+        internal void Assign(IEnumerable<TopicPartitionOffset> partitions)
         {
             ThrowIfHandleClosed();
 
@@ -785,7 +769,7 @@ namespace Confluent.Kafka.Impl
                     if (partition.Topic == null)
                     {
                         Librdkafka.topic_partition_list_destroy(list);
-                        throw new ArgumentException("Partition topic must not be null");
+                        throw new ArgumentException("Cannot assign partitions because one or more have a null topic.");
                     }
 
                     IntPtr ptr = Librdkafka.topic_partition_list_add(list, partition.Topic, partition.Partition);
@@ -796,61 +780,17 @@ namespace Confluent.Kafka.Impl
                 }
             }
 
-            ErrorCode err = ErrorCode.NoError;
-            Error error = null;
-
-            if (assignMethodErr != null)
-            {
-                err = assignMethodErr(handle, list);
-            }
-            else if (assignMethodError != null)
-            {
-                var errorPtr = assignMethodError(handle, list);
-                if (errorPtr != IntPtr.Zero)
-                {
-                    error = new Error(errorPtr);
-                }
-            }
-
+            ErrorCode err = Librdkafka.assign(handle, list);
             if (list != IntPtr.Zero)
             {
                 Librdkafka.topic_partition_list_destroy(list);
             }
-
-            if (err != ErrorCode.NoError) { throw new KafkaException(CreatePossiblyFatalError(err, null)); }
-            else if (error != null) { throw new KafkaException(error); }
-        }
-
-        internal void Assign(IEnumerable<TopicPartitionOffset> partitions)
-            => AssignImpl(partitions, Librdkafka.assign, null);
-
-        internal void IncrementalAssign(IEnumerable<TopicPartitionOffset> partitions)
-            => AssignImpl(partitions, null, Librdkafka.incremental_assign);
-
-        internal void IncrementalUnassign(IEnumerable<TopicPartitionOffset> partitions)
-            => AssignImpl(partitions, null, Librdkafka.incremental_unassign);
-
-        internal bool AssignmentLost
-        {
-            get
+            if (err != ErrorCode.NoError)
             {
-                ThrowIfHandleClosed();
-                return (Librdkafka.assignment_lost(handle) != IntPtr.Zero);
+                throw new KafkaException(CreatePossiblyFatalError(err, null));
             }
         }
 
-        internal string RebalanceProtocol
-        {
-            get
-            {
-                ThrowIfHandleClosed();
-                var rebalanceProtocolPtr = Librdkafka.rebalance_protocol(handle);
-                if (rebalanceProtocolPtr == IntPtr.Zero) {
-                    return null;
-                }
-                return Util.Marshal.PtrToStringUTF8(rebalanceProtocolPtr);
-            }
-        }
 
         internal void StoreOffsets(IEnumerable<TopicPartitionOffset> offsets)
         {
@@ -941,7 +881,7 @@ namespace Confluent.Kafka.Impl
         {
             ThrowIfHandleClosed();
 
-            SafeTopicHandle rkt = newTopic(topic, IntPtr.Zero);
+            SafeTopicHandle rkt = getKafkaTopicHandle(topic);
 
             bool success = false;
             rkt.DangerousAddRef(ref success);
@@ -1645,9 +1585,5 @@ namespace Confluent.Kafka.Impl
                 throw new KafkaException(errorCode);
             }
         }
-
-        internal SafeTopicConfigHandle DuplicateDefaultTopicConfig()
-            => Librdkafka.default_topic_conf_dup(this);
-
     }
 }

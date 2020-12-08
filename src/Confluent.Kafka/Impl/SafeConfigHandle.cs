@@ -59,9 +59,6 @@ namespace Confluent.Kafka.Impl
             return ch;
         }
 
-        internal SafeTopicConfigHandle GetDefaultTopicConfig()
-            => Librdkafka.conf_get_default_topic_conf(this);
-
         internal IntPtr Dup()
         {
             return Librdkafka.conf_dup(handle);
