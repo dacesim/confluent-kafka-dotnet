@@ -1,9 +1,11 @@
-# 1.5.3
+# 1.6.0-PRE4
 
-## Enhancements
-
-- References librdkafka 1.5.3. Refer to the [release notes](https://github.com/edenhill/librdkafka/releases/tag/v1.5.3) for more information.
-- References Apache.Avro v1.10.1, which adds support for enum defaults [AVRO-2750](https://issues.apache.org/jira/browse/AVRO-2750).
+- References librdkafka 1.6.0-PRE4. Refer to the [release notes](https://github.com/edenhill/librdkafka/releases/tag/v1.6.0) for more information. Headline features:
+  - KIP-429: Incremental rebalancing.
+  - KIP-480: Sticky partitioner.
+- KIP-22: Support for custom partitioners.
+- Confluent.Kafka can now be used with Mono on Linux and MacOS. **Note**: Mono is not a supported runtime.
+- Exceptions thrown by `Producer.Produce` now include an inner exception with additional context on the error ([joostas](https://github.com/joostas)).
 
 
 # 1.5.2
