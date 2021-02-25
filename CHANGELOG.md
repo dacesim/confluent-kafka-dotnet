@@ -1,4 +1,4 @@
-# 1.6.1-RC2
+# 1.6.2
 
 ## Enhancements
 
@@ -16,6 +16,19 @@
 ## Fixes
 
 - Fixed race condition in `ProtobufSerializer` ([yurii-hunter](https://github.com/yurii-hunter)).
+
+
+# 1.6.0, 1.6.1
+
+Version 1.6.0 and 1.6.1 were not released.
+
+
+# 1.5.3
+
+## Enhancements
+
+- References librdkafka 1.5.3. Refer to the [release notes](https://github.com/edenhill/librdkafka/releases/tag/v1.5.3) for more information.
+- References Apache.Avro v1.10.1, which adds support for enum defaults [AVRO-2750](https://issues.apache.org/jira/browse/AVRO-2750).
 
 
 # 1.5.2
