@@ -302,7 +302,7 @@ namespace Confluent.SchemaRegistry
                     // throws SchemaRegistryException if schema is not known.
                     var registeredSchema = await restService.LookupSchemaAsync(subject, schema, true).ConfigureAwait(continueOnCapturedContext: false);
                     idBySchema[schema.SchemaString] = registeredSchema.Id;
-                    schemaById[registeredSchema.Id] = registeredSchema.Schema;
+                    schemaById[schemaId] = registeredSchema.Schema;
                     schemaId = registeredSchema.Id;
                 }
 
