@@ -1,21 +1,3 @@
-# 1.7.0-RC8
-
-## Enhancements
-
-- References librdkafka.redist 1.7.0-RC8. Refer to the [librdkafka release notes](https://github.com/edenhill/librdkafka/releases/tag/v1.7.0-RC8) for a complete
-list of changes, enhancements, fixes and upgrade considerations.
-
-
-## Fixes
-
-- Resolved a schema caching bug ([#1587](https://github.com/confluentinc/confluent-kafka-dotnet/pull/1587)) in `CachedSchemaRegistryClient.GetSchemaIdAsync` ([jeremy001181](https://github.com/jeremy001181)).
-- Fixed a configuration error in the Web example ([cjgalione](https://github.com/cjgalione)).
-
-## Security
-
-- Updated `System.Net.Http` dependency to v4.3.4 ([CVE-2018-8292](https://github.com/advisories/GHSA-7jgj-8wvc-jh57))
-
-
 # 1.6.3
 
 ## Fixes
