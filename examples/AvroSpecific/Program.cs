@@ -107,7 +107,7 @@ namespace Confluent.Kafka.Examples.AvroSpecific
             {
                 Console.WriteLine($"{producer.Name} producing on {topicName}. Enter user names, q to exit.");
 
-                int i = 0;
+                int i = 1;
                 string text;
                 while ((text = Console.ReadLine()) != "q")
                 {
