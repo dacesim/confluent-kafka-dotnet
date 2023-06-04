@@ -254,21 +254,3 @@ available via the `Error` and `ConsumeResult` fields.
 There are numerous libraries that expand on the capabilities provided by Confluent.Kafka, or use Confluent.Kafka
 to integrate with Kafka. For more information, refer to the [3rd Party Libraries](3RD_PARTY.md) page.
 
-### Confluent Cloud
-
-For a step-by-step guide on using the .NET client with Confluent Cloud see [Getting Started with Apache Kafka and .NET](https://developer.confluent.io/get-started/dotnet/) on [Confluent Developer](https://developer.confluent.io/). 
-
-You can also refer to the [Confluent Cloud example](examples/ConfluentCloud) which demonstrates how to configure the .NET client for use with
-[Confluent Cloud](https://www.confluent.io/confluent-cloud/).
-
-### Developer Notes
-
-Instructions on building and testing confluent-kafka-dotnet can be found [here](DEVELOPER.md).
-
-Copyright (c) 
-2016-2019 [Confluent Inc.](https://www.confluent.io)
-2015-2016 [Andreas Heider](mailto:andreas@heider.io)
-
-KAFKA is a registered trademark of The Apache Software Foundation and has been licensed for use
-by confluent-kafka-dotnet. confluent-kafka-dotnet has no affiliation with and is not endorsed by
-The Apache Software Foundation.
